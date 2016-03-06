@@ -33,18 +33,37 @@ export function gawk(it, parent) {
 
 export class GawkBase {
 	constructor(value, parent) {
-		Object.defineProperty(this, 'value', { value });
-		Object.defineProperty(this, 'parent', { value: parent });
-		Object.defineProperty(this, 'watchers', { value: [], writable: true });
+		Object.defineProperties(this, {
+			value: { value, writable: true },
+			parent: { value: parent, writable: true },
+			watchers: { value: [], writable: true }
+		});
 	}
 
-	val() {
+	get val() {
 		return this.value;
 	}
 
-	notify() {
+	set val(value) {
+		this.value = value;
+	}
+
+	toString() {
+		if (typeof this.value === 'undefined' || this.value === null) {
+			return '';
+		}
+		return String(this.value);
+	}
+
+	valueOf() {
+		return this.val;
+	}
+
+	notify(oldValue) {
 		const evt = {
-			target: this
+			target: this,
+			old: oldValue,
+			new: this.val
 		};
 		for (let w of this.watchers) {
 			w(evt);
@@ -96,25 +115,48 @@ export class GawkDate extends GawkBase {
 	constructor(value, parent) {
 		super(value, parent);
 	}
+
+	// set val(value) {
+	// 	this.value = new Date;
+	// 	this.value.setTime(value.getTime());
+	// }
 }
 
 export class GawkArray extends GawkBase {
 	constructor(value, parent) {
-		const arr = [];
+		const len = value.length;
+		const arr = new Array(len);
 		super(arr, parent);
-		for (let i = 0, l = value.length; i < l; i++) {
-			arr.push(gawk(value[i], this));
+		for (let i = 0; i < len; i++) {
+			this.value[i] = gawk(value[i], this);
 		}
 	}
 
-	push(...items) {
-		this.value.push.apply(this.value, items.map(i => gawk(i, this)));
-		this.notify();
+	get val() {
+		return this.value.map(i => i.val);
 	}
 
-	val() {
-		return this.value.map(i => i.val());
+	set val(value) {
+		const oldValue = this.value.map(i => i.val);
+		const len = value.length;
+		this.value = new Array(len);
+		for (let i = 0; i < len; i++) {
+			this.value[i] = gawk(value[i], this);
+		}
+		this.notify(oldValue);
 	}
+
+	get length() {
+		return this.value.length;
+	}
+
+	push(...items) {
+		const oldValue = this.value.map(i => i.val);
+		this.value = this.value.concat.apply(this.value, items.map(i => gawk(i, this)));
+		this.notify(oldValue);
+	}
+
+	// pop()
 }
 
 export class GawkObject extends GawkBase {
@@ -122,7 +164,13 @@ export class GawkObject extends GawkBase {
 		super(value, parent);
 	}
 
-	val() {
+	get val() {
 		return {};
 	}
+
+	// set()
+	// delete()
+	// clear()
+	// update()
+	// assign()
 }

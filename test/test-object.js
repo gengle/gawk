@@ -10,7 +10,7 @@ describe('object', () => {
 
 		const gobj = gawk(obj);
 
-		expect(gobj.val()).to.deep.equal(obj);
+		expect(gobj.val).to.deep.equal(obj);
 	});
 });
 

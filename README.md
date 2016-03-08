@@ -8,8 +8,18 @@
 [![Deps][david-image]][david-url]
 [![Dev Deps][david-dev-image]][david-dev-url]
 
-Gawk is a observable model that stores JavaScript data types. Think of it as a
-JSON object that you can listen for changes.
+Gawk is a observable model that wraps JavaScript data types. Once a JavaScript
+value is wrapped, it allows you to listen for changes.
+
+Gawk supports the common built-in data types such as string, boolean, number,
+array, object, function, null, and undefined. Anything that you can represent
+in a JSON object, you can gawk.
+
+You can deeply nest objects too. Gawked arrays, objects, and functions have
+additional functions for common tasks. For example, `GawkArray` instances have
+`push()` and `pop()` methods.
+
+Gawk should work in web browsers, but it's not tested.
 
 > Note: gawk requires Node.js 4 or newer.
 
@@ -20,7 +30,41 @@ JSON object that you can listen for changes.
 ## Examples
 
 ```javascript
-// example goes here
+import { gawk } from 'gawk';
+// or if you're using CommonJS:
+// const gawk = require('gawk').gawk;
+
+const obj = gawk({
+    foo: 'bar'
+});
+
+obj.watch(evt => {
+    console.info('object changed!');
+    console.info('new value =', evt.value);
+});
+
+obj.set('foo', 'baz');
+
+console.info(obj.val); // { foo: 'baz' }
+```
+
+You can also be notified if a deep child is changed:
+
+```javascript
+const obj = gawk({
+    foo: {
+        bar: ['a', 'b']
+    }
+});
+
+obj.watch(evt => {
+    console.info('object changed!');
+    console.info('new value =', evt.value);
+});
+
+obj.get(['foo', 'bar']).push('c', 'd');
+
+console.info(obj.val); // { foo: { bar: ['a', 'b', 'c', 'd'] } }
 ```
 
 ## License

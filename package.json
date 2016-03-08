@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "babel-polyfill": "^6.6.1",
+    "object-hash": "^1.1.2",
     "source-map-support": "^0.4.0"
   },
   "devDependencies": {

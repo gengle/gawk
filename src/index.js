@@ -110,13 +110,34 @@ export class GawkBase {
 	 * @param {*} value - The value to save.
 	 * @access private
 	 */
-	save(value) {
-		const oldHash = this.hash;
-		const newHash = this.hash = hash(value);
-		this.value = value;
-		if (oldHash !== newHash) {
+	save(newValue) {
+		const oldValue = this.value;
+		this.value = newValue;
+		if (this.hasChanged(oldValue, newValue)) {
 			this.notify();
 		}
+	}
+
+	/**
+	 * Determines if the value has changed.
+	 * @returns {Boolean}
+	 * @access private
+	 */
+	hasChanged(oldValue, newValue) {
+		const oldHash = this.hash;
+		const newHash = this.hash = this.hasher(newValue);
+		return oldHash !== newHash;
+	}
+
+	/**
+	 * Internal helper that hashes any value. This method can be overridden by
+	 * classes.
+	 * @param {*} value - The value to hash.
+	 * @returns {String|null} Returns null if value is undefined, otherwise a string.
+	 * @access private
+	 */
+	hasher(value) {
+		return typeof value === 'undefined' ? null : hash(value);
 	}
 
 	/**
@@ -171,15 +192,12 @@ export class GawkUndefined extends GawkBase {
 	 * @access public
 	 */
 	constructor(value, parent) {
-		if (value !== undefined && !(value instanceof GawkUndefined)) {
-			throw new TypeError('Value must be undefined');
-		}
 		super(undefined, parent);
 	}
 
 	/**
 	 * Returns the value.
-	 * @returns {Null}
+	 * @returns {null}
 	 * @access public
 	 */
 	get val() {
@@ -201,20 +219,17 @@ export class GawkUndefined extends GawkBase {
 export class GawkNull extends GawkBase {
 	/**
 	 * Constructs the null object and makes sure the value is null.
-	 * @param {Null} value - The value must be omitted or null.
+	 * @param {null} value - The value must be omitted or null.
 	 * @param {GawkBase} [parent] - The parent gawk object to notify of changes.
 	 * @access public
 	 */
 	constructor(value, parent) {
-		if (value !== undefined && value !== null && !(value instanceof GawkNull)) {
-			throw new TypeError('Value must be null');
-		}
 		super(null, parent);
 	}
 
 	/**
 	 * Returns the value.
-	 * @returns {Null}
+	 * @returns {null}
 	 * @access public
 	 */
 	get val() {
@@ -241,7 +256,7 @@ export class GawkNumber extends GawkBase {
 	 * @access public
 	 */
 	constructor(value, parent) {
-		super(+value, parent);
+		super(typeof value === 'undefined' || value instanceof GawkUndefined ? 0 : value instanceof GawkBase ? +value.val : +value, parent);
 	}
 
 	/**
@@ -259,7 +274,7 @@ export class GawkNumber extends GawkBase {
 	 * @access public
 	 */
 	set val(value) {
-		this.save(+value);
+		this.save(typeof value === 'undefined' || value instanceof GawkUndefined ? 0 : value instanceof GawkBase ? +value.val : +value);
 	}
 }
 
@@ -274,7 +289,7 @@ export class GawkBoolean extends GawkBase {
 	 * @access public
 	 */
 	constructor(value, parent) {
-		super(value instanceof Boolean ? value.valueOf() : !!value, parent);
+		super(value instanceof Boolean ? value.valueOf() : value instanceof GawkBase ? !!value.val : !!value, parent);
 	}
 
 	/**
@@ -292,7 +307,7 @@ export class GawkBoolean extends GawkBase {
 	 * @access public
 	 */
 	set val(value) {
-		this.save(value instanceof Boolean ? value.valueOf() : !!value);
+		this.save(value instanceof Boolean ? value.valueOf() : value instanceof GawkBase ? !!value.val : !!value);
 	}
 }
 
@@ -368,6 +383,18 @@ export class GawkFunction extends GawkBase {
 	}
 
 	/**
+	 * Determines if the value has changed.
+	 * @returns {Boolean}
+	 * @access private
+	 */
+	hasChanged(oldValue, newValue) {
+		this.hash = this.hasher(newValue);
+		// we can't compare hashes since two different functions can have the
+		// same hash, so we compare the actual values
+		return oldValue !== newValue;
+	}
+
+	/**
 	 * Runs the function.
 	 * @param {*} [...args] - Zero or more arguments to pass in to the function.
 	 * @returns {*}
@@ -389,12 +416,10 @@ export class GawkDate extends GawkBase {
 	 * @access public
 	 */
 	constructor(value, parent) {
-		if (value && !(value instanceof Date)) {
-			throw new TypeError('Value must be a date object');
+		if (!(value instanceof Date) && !(value instanceof GawkDate)) {
+			throw new TypeError('Value must be a date');
 		}
-		const date = new Date;
-		date.setTime(value.getTime());
-		super(date, parent);
+		super(new Date((value instanceof GawkDate ? value.val : value).getTime()), parent);
 	}
 
 	/**
@@ -412,12 +437,10 @@ export class GawkDate extends GawkBase {
 	 * @access public
 	 */
 	set val(value) {
-		if (!(value instanceof Date)) {
-			throw new TypeError('Value must be a date object');
+		if (!(value instanceof Date) && !(value instanceof GawkDate)) {
+			throw new TypeError('Value must be a date');
 		}
-		const newValue = new Date;
-		newValue.setTime(value.getTime());
-		this.save(newValue);
+		this.save(value instanceof GawkDate ? value.val : value);
 	}
 }
 

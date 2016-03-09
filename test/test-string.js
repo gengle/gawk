@@ -25,6 +25,7 @@ describe('string', () => {
 		it('should cast non-string value', () => {
 			expect(new GawkString().val).to.equal('undefined');
 			expect(new GawkString(null).val).to.equal('null');
+			expect(new GawkString(true).val).to.equal('true');
 			expect(new GawkString(123).val).to.equal('123');
 			expect(new GawkString(3.14).val).to.equal('3.14');
 			expect(new GawkString(NaN).val).to.equal('NaN');
@@ -36,6 +37,7 @@ describe('string', () => {
 		it('should cast another gawk type', () => {
 			expect(new GawkString(gawk()).val).to.equal('undefined');
 			expect(new GawkString(gawk(null)).val).to.equal('null');
+			expect(new GawkString(gawk(true)).val).to.equal('true');
 			expect(new GawkString(gawk(123)).val).to.equal('123');
 			expect(new GawkString(gawk(3.14)).val).to.equal('3.14');
 			expect(new GawkString(gawk(NaN)).val).to.equal('NaN');
@@ -53,42 +55,28 @@ describe('string', () => {
 	describe('set casting', () => {
 		it('should cast and set non-string value', () => {
 			const str = gawk('');
-			str.val = undefined;
-			expect(str.val).to.equal('undefined');
-			str.val = null;
-			expect(str.val).to.equal('null');
-			str.val = 123;
-			expect(str.val).to.equal('123');
-			str.val = 3.14;
-			expect(str.val).to.equal('3.14');
-			str.val = NaN;
-			expect(str.val).to.equal('NaN');
-			str.val = ['a', 'b'];
-			expect(str.val).to.equal('a,b');
-			str.val = { foo: 'bar' };
-			expect(str.val).to.equal('[object Object]');
-			str.val = function () {};
-			expect(str.val).to.equal('function () {}');
+			str.val = undefined;         expect(str.val).to.equal('undefined');
+			str.val = null;              expect(str.val).to.equal('null');
+			str.val = true;              expect(str.val).to.equal('true');
+			str.val = 123;               expect(str.val).to.equal('123');
+			str.val = 3.14;              expect(str.val).to.equal('3.14');
+			str.val = NaN;               expect(str.val).to.equal('NaN');
+			str.val = ['a', 'b'];        expect(str.val).to.equal('a,b');
+			str.val = { foo: 'bar' };    expect(str.val).to.equal('[object Object]');
+			str.val = function () {};    expect(str.val).to.equal('function () {}');
 		});
 
 		it('should cast and set another gawk type', () => {
 			const str = gawk('');
-			str.val = gawk();
-			expect(str.val).to.equal('undefined');
-			str.val = gawk(null);
-			expect(str.val).to.equal('null');
-			str.val = gawk(123);
-			expect(str.val).to.equal('123');
-			str.val = gawk(3.14);
-			expect(str.val).to.equal('3.14');
-			str.val = gawk(NaN);
-			expect(str.val).to.equal('NaN');
-			str.val = gawk(['a', 'b']);
-			expect(str.val).to.equal('a,b');
-			str.val = gawk({ foo: 'bar' });
-			expect(str.val).to.equal('[object Object]');
-			str.val = gawk(function () {});
-			expect(str.val).to.equal('function () {}');
+			str.val = gawk();                  expect(str.val).to.equal('undefined');
+			str.val = gawk(null);              expect(str.val).to.equal('null');
+			str.val = gawk(true);              expect(str.val).to.equal('true');
+			str.val = gawk(123);               expect(str.val).to.equal('123');
+			str.val = gawk(3.14);              expect(str.val).to.equal('3.14');
+			str.val = gawk(NaN);               expect(str.val).to.equal('NaN');
+			str.val = gawk(['a', 'b']);        expect(str.val).to.equal('a,b');
+			str.val = gawk({ foo: 'bar' });    expect(str.val).to.equal('[object Object]');
+			str.val = gawk(function () {});    expect(str.val).to.equal('function () {}');
 		});
 
 		it('should copy another gawked string', () => {
@@ -100,13 +88,11 @@ describe('string', () => {
 
 	describe('built-ins', () => {
 		it('should support toString()', () => {
-			const str = gawk('foo');
-			expect(str.toString()).to.equal('foo');
+			expect(gawk('foo').toString()).to.equal('foo');
 		});
 
 		it('should support valueOf()', () => {
-			const str = gawk('foo');
-			expect(str.valueOf()).to.equal('foo');
+			expect(gawk('foo').valueOf()).to.equal('foo');
 		});
 	});
 

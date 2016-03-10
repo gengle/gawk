@@ -34,7 +34,7 @@ describe('function', () => {
 			expect(() => new GawkFunction({ foo: 'bar' })).to.throw(TypeError);
 		});
 
-		it('should cast another gawk type', () => {
+		it('should throw TypeError for non-function gawk type', () => {
 			expect(() => new GawkFunction(gawk())).to.throw(TypeError);
 			expect(() => new GawkFunction(gawk(null))).to.throw(TypeError);
 			expect(() => new GawkFunction(gawk(true))).to.throw(TypeError);
@@ -53,7 +53,7 @@ describe('function', () => {
 	});
 
 	describe('set casting', () => {
-		it('should cast and set non-function value', () => {
+		it('should throw TypeError when setting non-function value', () => {
 			const fn = gawk(function () {});
 			expect(() => { fn.val = undefined; }).to.throw(TypeError);
 			expect(() => { fn.val = null; }).to.throw(TypeError);
@@ -66,7 +66,7 @@ describe('function', () => {
 			expect(() => { fn.val = { foo: 'bar' }; }).to.throw(TypeError);
 		});
 
-		it('should cast and set another gawk type', () => {
+		it('should throw TypeError when setting non-function gawk type', () => {
 			const fn = gawk(function () {});
 			expect(() => { fn.val = gawk(); }).to.throw(TypeError);
 			expect(() => { fn.val = gawk(null); }).to.throw(TypeError);
@@ -97,6 +97,38 @@ describe('function', () => {
 		it('should support valueOf()', () => {
 			function foo() {}
 			expect(gawk(foo).valueOf()).to.equal(foo);
+		});
+	});
+
+	describe('methods', () => {
+		it('should execute the function', () => {
+			let count = 0;
+			const fn = gawk((x, y) => {
+				count++;
+				return x + y;
+			});
+			expect(fn).to.be.an.instanceof(GawkFunction);
+
+			expect(fn.exec(3, 7)).to.equal(10);
+
+			const fn2 = fn.val;
+			expect(fn2(3, 7)).to.equal(10);
+
+			expect(count).to.equal(2);
+		});
+
+		it('should execute another gawked function', () => {
+			let count = 0;
+			const fn = gawk((x, y) => {
+				count++;
+				return x + y;
+			});
+			expect(fn).to.be.an.instanceof(GawkFunction);
+
+			const fn2 = new GawkFunction(fn);
+			expect(fn2.exec(3, 7)).to.equal(10);
+
+			expect(count).to.equal(1);
 		});
 	});
 
@@ -149,38 +181,6 @@ describe('function', () => {
 			fn.val = function () {};
 
 			expect(count).to.equal(2);
-		});
-	});
-
-	describe('methods', () => {
-		it('should execute the function', () => {
-			let count = 0;
-			const fn = gawk((x, y) => {
-				count++;
-				return x + y;
-			});
-			expect(fn).to.be.an.instanceof(GawkFunction);
-
-			expect(fn.exec(3, 7)).to.equal(10);
-
-			const fn2 = fn.val;
-			expect(fn2(3, 7)).to.equal(10);
-
-			expect(count).to.equal(2);
-		});
-
-		it('should execute another gawked function', () => {
-			let count = 0;
-			const fn = gawk((x, y) => {
-				count++;
-				return x + y;
-			});
-			expect(fn).to.be.an.instanceof(GawkFunction);
-
-			const fn2 = new GawkFunction(fn);
-			expect(fn2.exec(3, 7)).to.equal(10);
-
-			expect(count).to.equal(1);
 		});
 	});
 });

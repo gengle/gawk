@@ -14,7 +14,7 @@ describe('date', () => {
 	});
 
 	describe('constructor casting', () => {
-		it('should cast non-date value', () => {
+		it('should throw TypeError for non-date value', () => {
 			expect(() => new GawkDate()).to.throw(TypeError);
 			expect(() => new GawkDate(null)).to.throw(TypeError);
 			expect(() => new GawkDate(true)).to.throw(TypeError);
@@ -27,7 +27,7 @@ describe('date', () => {
 			expect(() => new GawkDate(function () {})).to.throw(TypeError);
 		});
 
-		it('should cast another gawk type', () => {
+		it('should throw TypeError for non-date gawk type', () => {
 			expect(() => new GawkDate(gawk())).to.throw(TypeError);
 			expect(() => new GawkDate(gawk(null))).to.throw(TypeError);
 			expect(() => new GawkDate(gawk(true))).to.throw(TypeError);
@@ -44,11 +44,12 @@ describe('date', () => {
 			const date = new Date;
 			const gdate = new GawkDate(gawk(date));
 			expect(gdate.val.getTime()).to.equal(date.getTime());
+			expect(gdate.val).to.not.equal(date);
 		});
 	});
 
 	describe('set casting', () => {
-		it('should cast and set non-date value', () => {
+		it('should throw TypeError when setting non-date value', () => {
 			const date = gawk(new Date);
 			expect(() => { date.val = undefined; }).to.throw(TypeError);
 			expect(() => { date.val = null; }).to.throw(TypeError);
@@ -62,7 +63,7 @@ describe('date', () => {
 			expect(() => { date.val = function () {}; }).to.throw(TypeError);
 		});
 
-		it('should cast and set another gawk type', () => {
+		it('should throw TypeError when setting non-date gawk type', () => {
 			const date = gawk(new Date);
 			expect(() => { date.val = gawk(); }).to.throw(TypeError);
 			expect(() => { date.val = gawk(null); }).to.throw(TypeError);

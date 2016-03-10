@@ -1,6 +1,19 @@
 import hash from 'object-hash';
 import 'source-map-support/register';
 
+/*
+ * Golden Rules:
+ *  - Internal value must always be a JS data type, not a gawked type.
+ *  - Gawk containers (such as GawkArray and GawkObject) must recompute their
+ *    hash again if mutated or if a child changes.
+ *  - Gawk containers must implement their own hasher().
+ *  - Gawk containers must duplicate their input values.
+ *  - All methods or properties that return the value must returned the gawked
+ *    value unless the `val` getter or `toJS()` method is invoked.
+ *  - Gawk types may only have 1 and only 1 parent.
+ *  - When setting a new value, detach the old value's parent.
+ */
+
 /**
  * Creates a gawk object that wraps the input value.
  * @param {*} value - A value to wrap.
@@ -40,6 +53,17 @@ export function gawk(value, parent) {
 }
 
 /**
+ * Event class.
+ */
+export class GawkEvent {
+	constructor({ source, target, type }) {
+		this.source = source;
+		this.target = target;
+		this.type = type;
+	}
+}
+
+/**
  * The base class for all gawk data types.
  */
 export class GawkBase {
@@ -55,10 +79,34 @@ export class GawkBase {
 		}
 
 		Object.defineProperties(this, {
-			hash: { enumerable: true, value: typeof value === 'undefined' ? null : hash(value), writable: true },
-			value: { enumerable: true, value, writable: true },
-			parent: { value: parent, writable: true },
-			watchers: { value: [], writable: true }
+			/**
+			 * The sha1 hash of this value. If the value is undefined, then the
+			 * hash will always be `null`.
+			 * @type {String}
+			 * @access private
+			 */
+			_hash: { enumerable: true, value: typeof value === 'undefined' ? null : hash(value), writable: true },
+
+			/**
+			 * The actual value. This will always be a non-gawk type.
+			 * @type {Array}
+			 * @access private
+			 */
+			_value: { enumerable: true, value, writable: true },
+
+			/**
+			 * The parent reference to notify if change occurs.
+			 * @type {GawkBase}
+			 * @access private
+			 */
+			_parent: { value: parent, writable: true },
+
+			/**
+			 * The list of all watchers to notify of changes.
+			 * @type {Array}
+			 * @access private
+			 */
+			_watchers: { value: [], writable: true }
 		});
 	}
 
@@ -68,7 +116,7 @@ export class GawkBase {
 	 * @access public
 	 */
 	get val() {
-		return this.value;
+		return this._value;
 	}
 
 	/**
@@ -77,7 +125,35 @@ export class GawkBase {
 	 * @access public
 	 */
 	set val(value) {
-		this.save(value);
+		this.notify(value);
+	}
+
+	/**
+	 * Returns the value's hash. If the value is `undefined`, then the hash is `null`.
+	 * @returns {String}
+	 * @access public
+	 */
+	get hash() {
+		return this._hash;
+	}
+
+	/**
+	 * Returns the value as a pure JavaScript data type.
+	 * @returns {*}
+	 * @access public
+	 */
+	toJS() {
+		return this.val;
+	}
+
+	/**
+	 * Returns the value as a stringified JSON structure. Note that functions
+	 * will be omitted.
+	 * @returns {String}
+	 * @access public
+	 */
+	toJSON() {
+		return JSON.stringify(this.val);
 	}
 
 	/**
@@ -86,10 +162,10 @@ export class GawkBase {
 	 * @access public
 	 */
 	toString() {
-		if (typeof this.value === 'undefined' || this.value === null) {
+		if (typeof this._value === 'undefined' || this._value === null) {
 			return '';
 		}
-		return String(this.value);
+		return String(this._value);
 	}
 
 	/**
@@ -106,26 +182,12 @@ export class GawkBase {
 	}
 
 	/**
-	 * Internal helper that stores the value and notifies watchers.
-	 * @param {*} value - The value to save.
-	 * @access private
-	 */
-	save(newValue) {
-		const oldValue = this.value;
-		this.value = newValue;
-		if (this.hasChanged(oldValue, newValue)) {
-			this.notify();
-		}
-	}
-
-	/**
 	 * Determines if the value has changed.
+	 * @param {{ newHash: String, newValue: *, oldHash: String, oldValue: * }} param - New and old hashes and values.
 	 * @returns {Boolean}
 	 * @access private
 	 */
-	hasChanged(oldValue, newValue) {
-		const oldHash = this.hash;
-		const newHash = this.hash = this.hasher(newValue);
+	didChange({ newHash, oldHash }) {
 		return oldHash !== newHash;
 	}
 
@@ -141,20 +203,60 @@ export class GawkBase {
 	}
 
 	/**
-	 * Notifies watchers and the parent gawk object when this object changes.
+	 * Detaches any child gawk objects. This is so containers such as `GawkArray`
+	 * and `GawkObject` can disassociate themselves from their children.
 	 * @access private
 	 */
-	notify() {
-		const evt = {
-			type: 'change',
-			target: this
-		};
+	detachChildren() {
+		// noop
+	}
 
-		for (let w of this.watchers) {
+	/**
+	 * Notifies watchers and the parent gawk object when this object changes.
+	 * @param {*|GawkEvent} [newValue] - When value is a GawkEvent, that means
+	 * a child gawk object was changed. Otherwise, if a value is present, then
+	 * it is the new value. If there is no value passed in, then the existing
+	 * value was mutated and we just need to recompute the hash and send out
+	 * notifications.
+	 * @access private
+	 */
+	notify(newValue) {
+		const oldHash = this._hash;
+		const oldValue = this._value;
+
+		if (!arguments.length || newValue instanceof GawkEvent) {
+			// no new value or a child object changed, just continue to use the
+			// existing value
+			newValue = oldValue;
+		}
+
+		const newHash = this.hasher(newValue);
+
+		if (!this.didChange({ newHash, newValue, oldHash, oldValue })) {
+			return;
+		}
+
+		// at this point, either this value or a child value changed
+
+		this._hash = newHash;
+
+		if (arguments.length && !(newValue instanceof GawkEvent)) {
+			// we have a new value, detach any children and set it
+			this.detachChildren();
+			this._value = newValue;
+		}
+
+		const evt = new GawkEvent({
+			source: this,
+			target: arguments.length && newValue instanceof GawkEvent ? newValue.target : this,
+			type: 'change'
+		});
+
+		for (let w of this._watchers) {
 			w(evt);
 		}
 
-		this.parent && this.parent.notify();
+		this._parent && this._parent.notify(evt);
 	}
 
 	/**
@@ -169,12 +271,13 @@ export class GawkBase {
 			throw new TypeError('Listener must be a function');
 		}
 
-		this.watchers.push(fn);
+		this._watchers.push(fn);
+
 		return () => {
 			// remove all matches
-			for (let i = 0, l = this.watchers.length; i < l; i++) {
-				if (this.watchers[i] === fn) {
-					this.watchers.splice(i--, 1);
+			for (let i = 0, l = this._watchers.length; i < l; i++) {
+				if (this._watchers[i] === fn) {
+					this._watchers.splice(i--, 1);
 				}
 			}
 		};
@@ -201,7 +304,7 @@ export class GawkUndefined extends GawkBase {
 	 * @access public
 	 */
 	get val() {
-		return this.value;
+		return this._value;
 	}
 
 	/**
@@ -209,7 +312,7 @@ export class GawkUndefined extends GawkBase {
 	 * @access public
 	 */
 	set val(value) {
-		this.save(undefined);
+		this.notify(undefined);
 	}
 }
 
@@ -233,7 +336,7 @@ export class GawkNull extends GawkBase {
 	 * @access public
 	 */
 	get val() {
-		return this.value;
+		return this._value;
 	}
 
 	/**
@@ -241,7 +344,7 @@ export class GawkNull extends GawkBase {
 	 * @access public
 	 */
 	set val(value) {
-		this.save(null);
+		this.notify(null);
 	}
 }
 
@@ -265,7 +368,7 @@ export class GawkNumber extends GawkBase {
 	 * @access public
 	 */
 	get val() {
-		return this.value;
+		return this._value;
 	}
 
 	/**
@@ -274,7 +377,7 @@ export class GawkNumber extends GawkBase {
 	 * @access public
 	 */
 	set val(value) {
-		this.save(typeof value === 'undefined' || value instanceof GawkUndefined ? 0 : value instanceof GawkBase ? +value.val : +value);
+		this.notify(typeof value === 'undefined' || value instanceof GawkUndefined ? 0 : value instanceof GawkBase ? +value.val : +value);
 	}
 }
 
@@ -298,7 +401,7 @@ export class GawkBoolean extends GawkBase {
 	 * @access public
 	 */
 	get val() {
-		return this.value;
+		return this._value;
 	}
 
 	/**
@@ -307,7 +410,7 @@ export class GawkBoolean extends GawkBase {
 	 * @access public
 	 */
 	set val(value) {
-		this.save(value instanceof Boolean ? value.valueOf() : value instanceof GawkBase ? !!value.val : !!value);
+		this.notify(value instanceof Boolean ? value.valueOf() : value instanceof GawkBase ? !!value.val : !!value);
 	}
 }
 
@@ -331,7 +434,7 @@ export class GawkString extends GawkBase {
 	 * @access public
 	 */
 	get val() {
-		return this.value;
+		return this._value;
 	}
 
 	/**
@@ -340,7 +443,7 @@ export class GawkString extends GawkBase {
 	 * @access public
 	 */
 	set val(value) {
-		this.save(String(value instanceof GawkBase ? value.val : value));
+		this.notify(String(value instanceof GawkBase ? value.val : value));
 	}
 }
 
@@ -367,7 +470,7 @@ export class GawkFunction extends GawkBase {
 	 * @access public
 	 */
 	get val() {
-		return this.value;
+		return this._value;
 	}
 
 	/**
@@ -379,18 +482,16 @@ export class GawkFunction extends GawkBase {
 		if (typeof value !== 'function' && !(value instanceof GawkFunction)) {
 			throw new TypeError('Value must be a function');
 		}
-		this.save(value instanceof GawkFunction ? value.val : value);
+		this.notify(value instanceof GawkFunction ? value.val : value);
 	}
 
 	/**
 	 * Determines if the value has changed.
+	 * @param {{ newValue: Function, oldValue: Function }} param - New and old hashes and values.
 	 * @returns {Boolean}
 	 * @access private
 	 */
-	hasChanged(oldValue, newValue) {
-		this.hash = this.hasher(newValue);
-		// we can't compare hashes since two different functions can have the
-		// same hash, so we compare the actual values
+	didChange({ newValue, oldValue }) {
 		return oldValue !== newValue;
 	}
 
@@ -401,7 +502,7 @@ export class GawkFunction extends GawkBase {
 	 * @access public
 	 */
 	exec(...args) {
-		return this.value.apply(this, args);
+		return this._value.apply(this, args);
 	}
 }
 
@@ -428,7 +529,7 @@ export class GawkDate extends GawkBase {
 	 * @access public
 	 */
 	get val() {
-		return this.value;
+		return this._value;
 	}
 
 	/**
@@ -440,7 +541,7 @@ export class GawkDate extends GawkBase {
 		if (!(value instanceof Date) && !(value instanceof GawkDate)) {
 			throw new TypeError('Value must be a date');
 		}
-		this.save(value instanceof GawkDate ? value.val : value);
+		this.notify(value instanceof GawkDate ? value.val : value);
 	}
 }
 
@@ -455,18 +556,46 @@ export class GawkArray extends GawkBase {
 	 * @access public
 	 */
 	constructor(value, parent) {
-		if (value && !Array.isArray(value) && !(value instanceof GawkArray)) {
+		if (!Array.isArray(value) && !(value instanceof GawkArray)) {
 			throw new TypeError('Value must be an array');
 		}
 
-		const isGawked = value instanceof GawkArray;
-		const len = value.length;
-		const arr = new Array(len);
-
+		const arr = [];
 		super(arr, parent);
 
+		const isGawked = value instanceof GawkArray;
+		const len = arr.length = value.length;
+
+		// the initial hash is for an unpopulated array, so we need compute the
+		// real hash and we're going to do it as we copy each element to save
+		// ourselves from having to loop again
+		this._hash = '';
+
 		for (let i = 0; i < len; i++) {
-			this.value[i] = gawk(isGawked ? value.value[i].val : value[i], this);
+			arr[i] = gawk(isGawked ? value._value[i].val : value[i], this);
+			this._hash = hash(this._hash + arr[i]._hash);
+		}
+	}
+
+	/**
+	 * Internal helper that hashes any value. This method can be overridden by
+	 * classes.
+	 * @param {*} value - The value to hash.
+	 * @returns {String|null} Returns null if value is undefined, otherwise a string.
+	 * @access private
+	 */
+	hasher(value) {
+		return value.reduce((prev, elem) => hash(prev + elem.hash), '');
+	}
+
+	/**
+	 * Detaches any child gawk objects. This is so containers such as `GawkArray`
+	 * and `GawkObject` can disassociate themselves from their children.
+	 * @access private
+	 */
+	detachChildren() {
+		for (let elem of this._value) {
+			elem._parent = null;
 		}
 	}
 
@@ -476,7 +605,7 @@ export class GawkArray extends GawkBase {
 	 * @access public
 	 */
 	get val() {
-		return this.value.map(i => i.val);
+		return this._value.map(i => i.val);
 	}
 
 	/**
@@ -488,16 +617,33 @@ export class GawkArray extends GawkBase {
 		if (!Array.isArray(value) && !(value instanceof GawkArray)) {
 			throw new TypeError('Value must be an array');
 		}
+		this.notify((value instanceof GawkArray ? value.val : value).map(elem => gawk(elem, this)));
+	}
 
-		const isGawked = value instanceof GawkArray;
-		const len = value.length;
-		const newValue = new Array(len);
+	/**
+	 * Returns the gawked value at the specified index.
+	 * @param {Number} index - The index to return.
+	 * @returns {GawkBase}
+	 * @access public
+	 */
+	get(index) {
+		return this._value[index];
+	}
 
-		for (let i = 0; i < len; i++) {
-			newValue[i] = gawk(isGawked ? value.value[i].val : value[i], this);
+	/**
+	 * Returns the gawked value at the specified index.
+	 * @param {Number} index - The index to return.
+	 * @param {*} value - The value to
+	 * @returns {GawkBase}
+	 * @access public
+	 */
+	set(index, value) {
+		if (this._value[index] instanceof GawkBase) {
+			this._value[index]._parent = null;
 		}
-
-		this.save(newValue);
+		this._value[index] = gawk(value);
+		this.notify();
+		return this;
 	}
 
 	/**
@@ -506,7 +652,33 @@ export class GawkArray extends GawkBase {
 	 * @access public
 	 */
 	get length() {
-		return this.value.length;
+		return this._value.length;
+	}
+
+	/**
+	 * Removes an item at the specified index.
+	 * @param {Number} index - The index to remove.
+	 * @returns {*} The removed item.
+	 * @access public
+	 */
+	delete(index) {
+		if (index >= 0 && index < this._value.length) {
+			for (let elem of this._value.splice(index, 1)) {
+				elem._parent = null;
+			}
+			this.notify();
+		}
+		return this;
+	}
+
+	/**
+	 * Removes all items from the array.
+	 * @returns {GawkArray}
+	 * @access public
+	 */
+	clear() {
+		this.notify([]);
+		return this;
 	}
 
 	/**
@@ -515,17 +687,18 @@ export class GawkArray extends GawkBase {
 	 * @access public
 	 */
 	push(...items) {
-		this.value.push.apply(this.value, items.map(i => gawk(i, this)));
+		this._value.push.apply(this._value, items.map(i => gawk(i, this)));
 		this.notify();
+		return this._value.length;
 	}
 
 	/**
 	 * Removes the last item of the array and returns it.
-	 * @returns {*}
+	 * @returns {GawkBase}
 	 * @access public
 	 */
 	pop() {
-		const result = this.value.pop().val;
+		const result = this._value.pop();
 		this.notify();
 		return result;
 	}
@@ -536,21 +709,18 @@ export class GawkArray extends GawkBase {
 	 * @returns {Number} The new length.
 	 */
 	unshift(...items) {
-		if (!items.length) {
-			return 0;
-		}
-		const result = this.value.unshift.apply(this.value, items.map(i => gawk(i, this)));
+		const result = this._value.unshift.apply(this._value, items.map(i => gawk(i, this)));
 		this.notify();
 		return result;
 	}
 
 	/**
 	 * Removes the first item of the array and returns it.
-	 * @returns {*}
+	 * @returns {GawkBase}
 	 * @access public
 	 */
 	shift() {
-		const result = this.value.shift().val;
+		const result = this._value.shift();
 		this.notify();
 		return result;
 	}
@@ -604,8 +774,8 @@ export class GawkObject extends GawkBase {
 	 */
 	get val() {
 		const obj = {};
-		Object.keys(this.value).forEach(key => {
-			obj[key] = this.value[key].val;
+		Object.keys(this._value).forEach(key => {
+			obj[key] = this._value[key].val;
 		});
 		return obj;
 	}
@@ -626,7 +796,28 @@ export class GawkObject extends GawkBase {
 		Object.keys(value).forEach(key => {
 			newValue[key] = gawk(value[key], this);
 		});
-		this.save(newValue);
+		this.notify(newValue);
+	}
+
+	/**
+	 * Gets the value for a specific key in the object. You may also pass in an
+	 * array of keys to set the value for a deeply nested object value.
+	 * @param {String|Array<String>} key - The key or array of key segments.
+	 * @returns {*} The gawked value.
+	 * @access public
+	 */
+	get(key) {
+		let obj = this;
+		if (Array.isArray(key)) {
+			for (let i = 0, len = key.length - 1; i < len; i++) {
+				obj = obj.value[key[i]];
+				if (!(obj instanceof GawkObject)) {
+					return undefined;
+				}
+			}
+			key = key.pop();
+		}
+		return obj.value[key];
 	}
 
 	/**
@@ -655,53 +846,38 @@ export class GawkObject extends GawkBase {
 	}
 
 	/**
-	 * Gets the value for a specific key in the object. You may also pass in an
-	 * array of keys to set the value for a deeply nested object value.
-	 * @param {String|Array<String>} key - The key or array of key segments.
-	 * @returns {*} The gawked value.
-	 * @access public
-	 */
-	get(key) {
-		let obj = this;
-		if (Array.isArray(key)) {
-			for (let i = 0, len = key.length - 1; i < len; i++) {
-				obj = obj.value[key[i]];
-				if (!(obj instanceof GawkObject)) {
-					return undefined;
-				}
-			}
-			key = key.pop();
-		}
-		return obj.value[key];
-	}
-
-	/**
 	 * Removes a key/value from the object.
 	 * @param {String} key - The key to delete.
-	 * @returns {GawkObject}
+	 * @returns {*} The removed item.
+	 * @access public
 	 */
 	delete(key) {
-		if (this.value[key]) {
-			delete this.value[key];
+		if (this._value.hasOwnProperty(key)) {
+			const value = this._value[key];
+			value && value.detach();
+			delete this._value[key];
 			this.notify();
+			return value;
 		}
-		return this;
 	}
 
 	/**
 	 * Removes all key/value pairs from the object.
 	 * @returns {GawkObject}
+	 * @access public
 	 */
 	clear() {
-		this.save({});
+		Object.values(this._value).forEach(value => value.detach());
+		this.notify({});
 		return this;
 	}
 
 	/**
 	 * Returns an array of all keys.
 	 * @returns {Array}
+	 * @access public
 	 */
 	keys() {
-		return Object.keys(this.value);
+		return Object.keys(this._value);
 	}
 }

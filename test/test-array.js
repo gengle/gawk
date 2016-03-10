@@ -115,23 +115,192 @@ describe('array', () => {
 		});
 	});
 
+	describe('properties', () => {
+		it('.length', () => {
+			it('should have correct length', () => {
+				expect(gawk([]).length).to.equal(0);
+				expect(gawk(['a']).length).to.equal(1);
+				expect(gawk(['a', undefined]).length).to.equal(2);
+				expect(gawk(['a', undefined, 'b']).length).to.equal(3);
+			});
+		});
+	});
+
 	describe('methods', () => {
-		it('should get the gawked value at a valid index', () => {
-			const garr = gawk(['a']);
-			const str = garr.get(0);
-			expect(str).to.be.an.instanceof(GawkString);
-			expect(str.val).to.equal('a');
+		describe('get()', () => {
+			it('should get the gawked value at a valid index', () => {
+				const garr = gawk(['a']);
+				const str = garr.get(0);
+				expect(str).to.be.an.instanceof(GawkString);
+				expect(str.val).to.equal('a');
+			});
+
+			it('should get the gawked value at an invalid index', () => {
+				const arr = gawk(['a']);
+				expect(arr.get(1)).to.be.undefined;
+			});
 		});
 
-		it('should get the gawked value at an invalid index', () => {
-			const arr = gawk(['a']);
-			expect(arr.get(1)).to.be.undefined;
+		describe('set()', () => {
+			it('should set a value at the specified indices', () => {
+				const arr = gawk(['a']);
+				arr.set(0, 'b').set(1, 'c');
+				expect(arr.val).to.deep.equal(['b', 'c']);
+			});
 		});
 
-		it('should set a value at the specified index', () => {
-			const arr = gawk(['a']);
-			arr.set(0, 'b').set(1, 'c');
-			expect(arr.val).to.deep.equal(['b', 'c']);
+		describe('delete()', () => {
+			it('should delete an element at the valid positive index', () => {
+				const arr = gawk(['a', 'b', 'c', 'd']);
+				const removed = arr.delete(2);
+				expect(arr.length).to.equal(3);
+				expect(removed).to.be.instanceof(GawkString);
+				expect(removed.val).to.equal('c');
+				expect(arr.val).to.deep.equal(['a', 'b', 'd']);
+			});
+
+			it('should delete an element at the valid negative index', () => {
+				const arr = gawk(['a', 'b', 'c', 'd']);
+				const removed = arr.delete(-2);
+				expect(arr.length).to.equal(3);
+				expect(removed).to.be.instanceof(GawkString);
+				expect(removed.val).to.equal('c');
+				expect(arr.val).to.deep.equal(['a', 'b', 'd']);
+			});
+
+			it('should handle delete an element that does not exist', () => {
+				const arr = gawk(['a', 'b', 'c', 'd']);
+				const removed = arr.delete(10);
+				expect(arr.length).to.equal(4);
+				expect(removed).to.be.undefined;
+				expect(arr.val).to.deep.equal(['a', 'b', 'c', 'd']);
+			});
+		});
+
+		describe('clear()', () => {
+			it('should delete an element at the valid positive index', () => {
+				const arr = gawk(['a', 'b', 'c', 'd']);
+				arr.clear();
+				expect(arr.length).to.equal(0);
+				expect(arr.val).to.deep.equal([]);
+			});
+		});
+
+		describe('push()', () => {
+			it('should add an element to the end of the array', () => {
+				const arr = gawk(['a']);
+				expect(arr.push('b')).to.equal(2);
+				expect(arr.length).to.equal(2);
+				expect(arr.val).to.deep.equal(['a', 'b']);
+			});
+
+			it('should add many elements to the end of the array', () => {
+				const arr = gawk(['a']);
+				expect(arr.push('b', 'c', 'd', 'e')).to.equal(5);
+				expect(arr.length).to.equal(5);
+				expect(arr.val).to.deep.equal(['a', 'b', 'c', 'd', 'e']);
+			});
+		});
+
+		describe('pop()', () => {
+			it('should remove an element from the end of the array', () => {
+				const arr = gawk(['a', 'b']);
+				const str = arr.pop();
+				expect(str.val).to.equal('b');
+				expect(arr.length).to.equal(1);
+				expect(arr.val).to.deep.equal(['a']);
+			});
+
+			it('should return undefined when popping an empty array', () => {
+				const arr = gawk([]);
+				const str = arr.pop();
+				expect(str).to.be.undefined;
+				expect(arr.length).to.equal(0);
+				expect(arr.val).to.deep.equal([]);
+			});
+		});
+
+		describe('unshift()', () => {
+			it('should add an element to the beginning of the array', () => {
+				const arr = gawk(['a']);
+				expect(arr.unshift('b')).to.equal(2);
+				expect(arr.length).to.equal(2);
+				expect(arr.val).to.deep.equal(['b', 'a']);
+			});
+
+			it('should add many elements to the beginning of the array', () => {
+				const arr = gawk(['a']);
+				expect(arr.unshift('b', 'c', 'd', 'e')).to.equal(5);
+				expect(arr.length).to.equal(5);
+				expect(arr.val).to.deep.equal(['b', 'c', 'd', 'e', 'a']);
+			});
+		});
+
+		describe('shift()', () => {
+			it('should remove an element from the beginning of the array', () => {
+				const arr = gawk(['a', 'b']);
+				const str = arr.shift();
+				expect(str.val).to.equal('a');
+				expect(arr.length).to.equal(1);
+				expect(arr.val).to.deep.equal(['b']);
+			});
+
+			it('should return undefined when shifting an empty array', () => {
+				const arr = gawk([]);
+				const str = arr.shift();
+				expect(str).to.be.undefined;
+				expect(arr.length).to.equal(0);
+				expect(arr.val).to.deep.equal([]);
+			});
+		});
+
+		describe('slice()', () => {
+			it('should slice an array with no start and no end', () => {
+				const orig = gawk(['a', 'b']);
+				const arr = orig.slice();
+				expect(arr).to.be.instanceof(GawkArray);
+				expect(arr.length).to.equal(2);
+				expect(arr.hash).to.equal(orig.hash);
+				expect(arr.val).to.deep.equal(['a', 'b']);
+				expect(orig.val).to.deep.equal(['a', 'b']);
+			});
+
+			it('should slice an array with a start and no end', () => {
+				const orig = gawk(['a', 'b', 'c', 'd']);
+				const arr = orig.slice(2);
+				expect(arr).to.be.instanceof(GawkArray);
+				expect(arr.length).to.equal(2);
+				expect(arr.hash).not.to.equal(orig.hash);
+				expect(arr.val).to.deep.equal(['c', 'd']);
+				expect(orig.val).to.deep.equal(['a', 'b', 'c', 'd']);
+			});
+
+			it('should slice an array with a start and an end', () => {
+				const orig = gawk(['a', 'b', 'c', 'd']);
+				const arr = orig.slice(2, 3);
+				expect(arr).to.be.instanceof(GawkArray);
+				expect(arr.length).to.equal(1);
+				expect(arr.val).to.deep.equal(['c']);
+				expect(orig.val).to.deep.equal(['a', 'b', 'c', 'd']);
+			});
+
+			it('should slice an array with a negative start and no end', () => {
+				const orig = gawk(['a', 'b', 'c', 'd']);
+				const arr = orig.slice(-1);
+				expect(arr).to.be.instanceof(GawkArray);
+				expect(arr.length).to.equal(1);
+				expect(arr.val).to.deep.equal(['d']);
+				expect(orig.val).to.deep.equal(['a', 'b', 'c', 'd']);
+			});
+
+			it('should slice an array with a negative start and a negative end', () => {
+				const orig = gawk(['a', 'b', 'c', 'd']);
+				const arr = orig.slice(-2, -1);
+				expect(arr).to.be.instanceof(GawkArray);
+				expect(arr.length).to.equal(1);
+				expect(arr.val).to.deep.equal(['c']);
+				expect(orig.val).to.deep.equal(['a', 'b', 'c', 'd']);
+			});
 		});
 	});
 
@@ -185,91 +354,70 @@ describe('array', () => {
 			expect(count).to.equal(2);
 		});
 
-		// it('should be notified if an element is updated', () => {
-		// 	const garr = gawk(['a']);
-		// });
-	});
+		it('should be notified when array changes', () => {
+			let count = 0;
+			const gobj = gawk(['a', 'b']);
 
+			gobj.watch(evt => {
+				count++;
+			});
 
-/*
-	it('should push a new element onto an array', () => {
-		const gobj = gawk(['a', 'b']);
-		expect(gobj).to.be.an.instanceof(GawkArray);
-		expect(gobj.length).to.equal(2);
-		gobj.push('c');
+			gobj.push('c');
+			gobj.pop();
+			gobj.unshift('d');
+			gobj.shift();
 
-		const val = gobj.val;
-		expect(val).to.be.an.array;
-		expect(val).to.have.lengthOf(3);
-		expect(val).to.deep.equal(['a', 'b', 'c']);
-	});
-
-	it('should be notified when array changes', () => {
-		const arr = ['a', 'b'];
-		const gobj = gawk(arr);
-		expect(gobj).to.be.an.instanceof(GawkArray);
-		expect(gobj.length).to.equal(2);
-
-		gobj.watch(evt => {
-			expect(evt.target).to.equal(gobj);
-
-			expect(evt.value).to.be.an.array;
-			expect(evt.value).to.have.lengthOf(3);
-			expect(evt.value).to.deep.equal(['a', 'b', 'c']);
-
-			const val = evt.target.val;
-			expect(val).to.be.an.array;
-			expect(val).to.have.lengthOf(3);
-			expect(val).to.deep.equal(['a', 'b', 'c']);
+			expect(count).to.equal(4);
 		});
 
-		gobj.push('c');
-	});
+		it('should be notified when deeply nexted children change', () => {
+			let count1 = 0;
+			let count2 = 0;
+			let count3 = 0;
 
-	it('should be notified when child changes', () => {
-		const gobj = gawk(['a', 'b', ['c']]);
-		expect(gobj).to.be.an.instanceof(GawkArray);
-		expect(gobj.length).to.equal(3);
+			const arr1 = gawk([]);
+			const arr2 = gawk([]);
+			const arr3 = gawk([]);
 
-		gobj.watch(evt => {
-			const val = evt.target.val;
-			expect(val).to.be.an.array;
-			expect(val).to.have.lengthOf(3);
-			expect(val).to.deep.equal(['a', 'b', ['c', 'd']]);
+			arr1.push(arr2);
+			arr2.push(arr3);
+
+			expect(arr1._parent).to.be.null;
+			expect(arr2._parent).to.equal(arr1);
+			expect(arr3._parent).to.equal(arr2);
+
+			arr1.watch(evt => {
+				count1++;
+				expect(evt.source).to.equal(arr1);
+				expect(evt.target).to.equal(arr3);
+			});
+
+			arr2.watch(evt => {
+				count2++;
+				expect(evt.source).to.equal(arr2);
+				expect(evt.target).to.equal(arr3);
+			});
+
+			arr3.watch(evt => {
+				count3++;
+				expect(evt.source).to.equal(arr3);
+				expect(evt.target).to.equal(arr3);
+			});
+
+			arr3.push('foo');
+
+			expect(count1).to.equal(1);
+			expect(count2).to.equal(1);
+			expect(count3).to.equal(1);
+
+			expect(arr3.length).to.equal(1);
+			expect(arr3.val).to.deep.equal(['foo']);
+
+			expect(arr2.length).to.equal(1);
+			expect(arr2.val).to.deep.equal([['foo']]);
+
+			expect(arr1.length).to.equal(1);
+			expect(arr1.val).to.deep.equal([[['foo']]]);
 		});
-
-		gobj.value[2].push('d');
 	});
-
-	it('should only notify if value is uniquely changed', () => {
-		const gobj = gawk(['a', 'b']);
-		let count = 0;
-
-		gobj.watch(evt => {
-			count++;
-		});
-
-		gobj.val = ['c', 'd'];
-		expect(count).to.equal(1);
-
-		gobj.val = ['c', 'd'];
-		expect(count).to.equal(1);
-	});
-
-	it('should push and pop', () => {
-		const gobj = gawk(['a']);
-		let count = 0;
-
-		gobj.watch(evt => {
-			count++;
-		});
-
-		gobj.push('b');
-
-		const r = gobj.pop();
-		expect(r).to.equal('b');
-
-		expect(count).to.equal(2);
-	});
-	*/
 });

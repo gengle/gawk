@@ -1,57 +1,48 @@
 import { gawk, GawkObject, GawkString, GawkArray } from '../src/index';
 
 describe('object', () => {
-	it('should gawk empty object', () => {
-		const obj = {};
-		const gobj = gawk(obj);
-		expect(gobj).to.be.an.instanceof(GawkObject);
-		const val = gobj.val;
-		expect(val).to.deep.equal(obj);
+	describe('gawk()', () => {
+		it('should gawk empty object', () => {
+			const obj = {};
+			const gobj = gawk(obj);
+			expect(gobj).to.be.an.instanceof(GawkObject);
+			const val = gobj.val;
+			expect(val).to.deep.equal(obj);
+		});
+
+		it('should gawk object with mixed values', () => {
+			const obj = {
+				foo: 'bar',
+				num: 123,
+				pi: 3.14,
+				undef: undefined,
+				nul: null,
+				nan: NaN,
+				arr: ['a', 123, 4.56, null, undefined]
+			};
+			const gobj = gawk(obj);
+			expect(gobj).to.be.an.instanceof(GawkObject);
+			expect(gobj.keys()).to.deep.equal(Object.keys(obj));
+			const val = gobj.val;
+			expect(val).to.be.an.object;
+			expect(val).to.deep.equal(obj);
+		});
+
+		it('should gawk object with nested objects', () => {
+			const obj = {
+				foo: {
+					bar: 'baz'
+				}
+			};
+			const gobj = gawk(obj);
+			expect(gobj).to.be.an.instanceof(GawkObject);
+			const val = gobj.val;
+			expect(val).to.be.an.object;
+			expect(val).to.deep.equal(obj);
+		});
 	});
 
-	it('should gawk object', () => {
-		const obj = {
-			foo: 'bar'
-		};
-		const gobj = gawk(obj);
-		expect(gobj).to.be.an.instanceof(GawkObject);
-		const val = gobj.val;
-		expect(val).to.be.an.object;
-		expect(val).to.deep.equal(obj);
-	});
-
-	it('should gawk object with mixed values', () => {
-		const obj = {
-			foo: 'bar',
-			num: 123,
-			pi: 3.14,
-			undef: undefined,
-			nul: null,
-			nan: NaN,
-			arr: ['a', 123, 4.56, null, undefined]
-		};
-		const gobj = gawk(obj);
-		expect(gobj).to.be.an.instanceof(GawkObject);
-		expect(gobj.keys()).to.deep.equal(Object.keys(obj));
-		const val = gobj.val;
-		expect(val).to.be.an.object;
-		expect(val).to.deep.equal(obj);
-	});
-
-	it('should gawk object with nested objects', () => {
-		const obj = {
-			foo: {
-				bar: 'baz'
-			}
-		};
-		const gobj = gawk(obj);
-		expect(gobj).to.be.an.instanceof(GawkObject);
-		const val = gobj.val;
-		expect(val).to.be.an.object;
-		expect(val).to.deep.equal(obj);
-	});
-
-	it('should fail to gawk non-object arg', () => {
+/*	it('should fail to gawk non-object arg', () => {
 		expect(() => {
 			new GawkObject('foo');
 		}).to.throw(TypeError);
@@ -283,4 +274,5 @@ describe('object', () => {
 		const gobj = gawk(obj);
 		expect(gobj.valueOf()).to.deep.equal(obj);
 	});
+	*/
 });

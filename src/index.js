@@ -42,6 +42,7 @@ export function gawk(value, parent) {
 		cls = GawkFunction;
 	} else if (typeof value === 'object') {
 		if (value instanceof GawkBase) {
+			value._parent = parent;
 			return value;
 		}
 		cls = GawkObject;
@@ -73,7 +74,7 @@ export class GawkBase {
 	 * @param {GawkBase} [parent] - The parent gawk object to notify of changes.
 	 * @access public
 	 */
-	constructor(value, parent) {
+	constructor(value, parent = null) {
 		if (parent && !(parent instanceof GawkBase)) {
 			throw new TypeError('Parent must be a gawk class');
 		}
@@ -221,18 +222,14 @@ export class GawkBase {
 	 * @access private
 	 */
 	notify(newValue) {
-		const oldHash = this._hash;
 		const oldValue = this._value;
+		const oldHash = this._hash;
 
-		if (!arguments.length || newValue instanceof GawkEvent) {
-			// no new value or a child object changed, just continue to use the
-			// existing value
-			newValue = oldValue;
-		}
+		// newValue is a new value and not an event or undefined (mutation only)
+		const newishValue = arguments.length && !(newValue instanceof GawkEvent) ? newValue : oldValue;
+		const newHash = this.hasher(newishValue);
 
-		const newHash = this.hasher(newValue);
-
-		if (!this.didChange({ newHash, newValue, oldHash, oldValue })) {
+		if (!this.didChange({ newHash, newValue: newishValue, oldHash, oldValue })) {
 			return;
 		}
 
@@ -566,14 +563,16 @@ export class GawkArray extends GawkBase {
 		const isGawked = value instanceof GawkArray;
 		const len = arr.length = value.length;
 
-		// the initial hash is for an unpopulated array, so we need compute the
-		// real hash and we're going to do it as we copy each element to save
-		// ourselves from having to loop again
-		this._hash = '';
+		if (len) {
+			// the initial hash is for an unpopulated array, so we need compute the
+			// real hash and we're going to do it as we copy each element to save
+			// ourselves from having to loop again
+			this._hash = '';
 
-		for (let i = 0; i < len; i++) {
-			arr[i] = gawk(isGawked ? value._value[i].val : value[i], this);
-			this._hash = hash(this._hash + arr[i]._hash);
+			for (let i = 0; i < len; i++) {
+				arr[i] = gawk(isGawked ? value._value[i].val : value[i], this);
+				this._hash = hash(this._hash + arr[i]._hash);
+			}
 		}
 	}
 
@@ -585,7 +584,7 @@ export class GawkArray extends GawkBase {
 	 * @access private
 	 */
 	hasher(value) {
-		return value.reduce((prev, elem) => hash(prev + elem.hash), '');
+		return value.length ? value.reduce((prev, elem) => hash(prev + elem.hash), '') : hash([]);
 	}
 
 	/**
@@ -658,17 +657,17 @@ export class GawkArray extends GawkBase {
 	/**
 	 * Removes an item at the specified index.
 	 * @param {Number} index - The index to remove.
-	 * @returns {*} The removed item.
+	 * @returns {GawkBase} The removed item or `undefined` if nothing was removed.
 	 * @access public
 	 */
 	delete(index) {
-		if (index >= 0 && index < this._value.length) {
-			for (let elem of this._value.splice(index, 1)) {
-				elem._parent = null;
-			}
-			this.notify();
+		const removed = this._value.splice(index, 1)[0];
+		if (removed) {
+			// `removed` could be undefined
+			removed._parent = null;
 		}
-		return this;
+		this.notify();
+		return removed;
 	}
 
 	/**
@@ -707,6 +706,7 @@ export class GawkArray extends GawkBase {
 	 * Adds one or more items to the beginning of the array.
 	 * @param {*} [...items] - One or more items to add.
 	 * @returns {Number} The new length.
+	 * @access public
 	 */
 	unshift(...items) {
 		const result = this._value.unshift.apply(this._value, items.map(i => gawk(i, this)));
@@ -723,6 +723,17 @@ export class GawkArray extends GawkBase {
 		const result = this._value.shift();
 		this.notify();
 		return result;
+	}
+
+	/**
+	 * Returns a deep copy of a portion of the array as a new `GawkArray`.
+	 * @param {Number} [start] - The index to start the slice.
+	 * @param {Number} [end] - The index to end the slice.
+	 * @returns {GawkArray}
+	 * @access public
+	 */
+	slice(start, end) {
+		return new GawkArray(this._value.slice(start, end).map(elem => elem.val));
 	}
 }
 

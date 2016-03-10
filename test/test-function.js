@@ -101,34 +101,36 @@ describe('function', () => {
 	});
 
 	describe('methods', () => {
-		it('should execute the function', () => {
-			let count = 0;
-			const fn = gawk((x, y) => {
-				count++;
-				return x + y;
+		describe('exec()', () => {
+			it('should execute the function', () => {
+				let count = 0;
+				const fn = gawk((x, y) => {
+					count++;
+					return x + y;
+				});
+				expect(fn).to.be.an.instanceof(GawkFunction);
+
+				expect(fn.exec(3, 7)).to.equal(10);
+
+				const fn2 = fn.val;
+				expect(fn2(3, 7)).to.equal(10);
+
+				expect(count).to.equal(2);
 			});
-			expect(fn).to.be.an.instanceof(GawkFunction);
 
-			expect(fn.exec(3, 7)).to.equal(10);
+			it('should execute another gawked function', () => {
+				let count = 0;
+				const fn = gawk((x, y) => {
+					count++;
+					return x + y;
+				});
+				expect(fn).to.be.an.instanceof(GawkFunction);
 
-			const fn2 = fn.val;
-			expect(fn2(3, 7)).to.equal(10);
+				const fn2 = new GawkFunction(fn);
+				expect(fn2.exec(3, 7)).to.equal(10);
 
-			expect(count).to.equal(2);
-		});
-
-		it('should execute another gawked function', () => {
-			let count = 0;
-			const fn = gawk((x, y) => {
-				count++;
-				return x + y;
+				expect(count).to.equal(1);
 			});
-			expect(fn).to.be.an.instanceof(GawkFunction);
-
-			const fn2 = new GawkFunction(fn);
-			expect(fn2.exec(3, 7)).to.equal(10);
-
-			expect(count).to.equal(1);
 		});
 	});
 

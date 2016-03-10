@@ -15,8 +15,8 @@ Gawk supports the common built-in data types such as string, boolean, number,
 array, object, function, null, and undefined. Anything that you can represent
 in a JSON object, you can gawk.
 
-You can deeply nest objects too. Gawked arrays, objects, and functions have
-additional functions for common tasks. For example, `GawkArray` instances have
+You can observe deeply nested objects too. Gawked arrays, objects, and functions
+have unique methods for common tasks. For example, `GawkArray` instances have
 `push()` and `pop()` methods.
 
 Gawk should work in web browsers, but it's not tested.

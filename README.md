@@ -45,7 +45,7 @@ obj.watch(evt => {
 
 obj.set('foo', 'baz');
 
-console.info(obj.val); // { foo: 'baz' }
+console.info(obj.toJS()); // { foo: 'baz' }
 ```
 
 You can also be notified if a deep child is changed:
@@ -64,7 +64,7 @@ obj.watch(evt => {
 
 obj.get(['foo', 'bar']).push('c', 'd');
 
-console.info(obj.val); // { foo: { bar: ['a', 'b', 'c', 'd'] } }
+console.info(obj.toJS()); // { foo: { bar: ['a', 'b', 'c', 'd'] } }
 ```
 
 ## License

@@ -196,11 +196,11 @@ export class GawkBase {
 	 * Internal helper that hashes any value. This method can be overridden by
 	 * classes.
 	 * @param {*} value - The value to hash.
-	 * @returns {String|null} Returns null if value is undefined, otherwise a string.
+	 * @returns {String}
 	 * @access private
 	 */
 	hasher(value) {
-		return typeof value === 'undefined' ? null : hash(value);
+		return typeof value === 'undefined' ? 'undefined' : hash(value);
 	}
 
 	/**
@@ -577,10 +577,9 @@ export class GawkArray extends GawkBase {
 	}
 
 	/**
-	 * Internal helper that hashes any value. This method can be overridden by
-	 * classes.
-	 * @param {*} value - The value to hash.
-	 * @returns {String|null} Returns null if value is undefined, otherwise a string.
+	 * Internal helper that hashes any value.
+	 * @param {Array} value - The array to hash.
+	 * @returns {String}
 	 * @access private
 	 */
 	hasher(value) {
@@ -588,8 +587,7 @@ export class GawkArray extends GawkBase {
 	}
 
 	/**
-	 * Detaches any child gawk objects. This is so containers such as `GawkArray`
-	 * and `GawkObject` can disassociate themselves from their children.
+	 * Detaches any child gawk objects.
 	 * @access private
 	 */
 	detachChildren() {
@@ -661,13 +659,12 @@ export class GawkArray extends GawkBase {
 	 * @access public
 	 */
 	delete(index) {
-		const removed = this._value.splice(index, 1)[0];
-		if (removed) {
-			// `removed` could be undefined
-			removed._parent = null;
+		const value = this._value.splice(index, 1)[0];
+		if (value) { // check that value is not undefined
+			value._parent = null;
 		}
 		this.notify();
-		return removed;
+		return value;
 	}
 
 	/**
@@ -748,34 +745,51 @@ export class GawkObject extends GawkBase {
 	 * @access public
 	 */
 	constructor(value, parent) {
+		if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+			throw new TypeError('Value must be an object');
+		}
+
 		const obj = {};
 		super(obj, parent);
 
-		if (typeof value === undefined) {
-			return;
-		}
-		if (typeof value !== 'object') {
-			throw new TypeError('Value must be an object');
-		}
-		if (value === null) {
-			throw new TypeError('Value must be non-null');
-		}
-
 		const isGawked = value instanceof GawkObject;
-
 		if (!isGawked && value instanceof GawkBase) {
 			throw new TypeError('Value must be a GawkObject or non-gawk object');
 		}
 
-		if (isGawked) {
-			value.keys().forEach(key => {
-				obj[key] = gawk(value.value[key].val, this);
-			});
-		} else {
-			Object.keys(value).forEach(key => {
-				obj[key] = gawk(value[key], this);
-			});
+		const keys = isGawked ? value.keys() : Object.keys(value);
+		if (keys.length) {
+			// the initial hash is for an unpopulated object, so we need compute
+			// the real hash and we're going to do it as we copy each element to
+			// save ourselves from having to loop again
+			this._hash = '';
+
+			for (let key of keys) {
+				const v = obj[key] = gawk(isGawked ? value._value[key].val : value[key], this);
+				this._hash = hash(this._hash + v._hash);
+			}
 		}
+	}
+
+	/**
+	 * Internal helper that hashes any value.
+	 * @param {Object} value - The object to hash.
+	 * @returns {String}
+	 * @access private
+	 */
+	hasher(value) {
+		const keys = Object.keys(value);
+		return keys.length ? keys.reduce((prev, key) => hash(prev + value[key]._hash), '') : hash({});
+	}
+
+	/**
+	 * Detaches any child gawk objects.
+	 * @access private
+	 */
+	detachChildren() {
+		Object.keys(this._value).forEach(key => {
+			this._value[key]._parent = null;
+		});
 	}
 
 	/**
@@ -797,15 +811,18 @@ export class GawkObject extends GawkBase {
 	 * @access public
 	 */
 	set val(value) {
-		if (typeof value !== 'object') {
+		if (typeof value !== 'object' || value === null || Array.isArray(value)) {
 			throw new TypeError('Value must be an object');
 		}
-		if (value === null) {
-			throw new TypeError('Value must be non-null');
+
+		const isGawked = value instanceof GawkObject;
+		if (!isGawked && value instanceof GawkBase) {
+			throw new TypeError('Value must be a GawkObject or non-Gawk* object');
 		}
+
 		const newValue = {};
 		Object.keys(value).forEach(key => {
-			newValue[key] = gawk(value[key], this);
+			newValue[key] = gawk(isGawked ? value._value[key].val : value[key], this);
 		});
 		this.notify(newValue);
 	}
@@ -821,14 +838,14 @@ export class GawkObject extends GawkBase {
 		let obj = this;
 		if (Array.isArray(key)) {
 			for (let i = 0, len = key.length - 1; i < len; i++) {
-				obj = obj.value[key[i]];
+				obj = obj._value[key[i]];
 				if (!(obj instanceof GawkObject)) {
 					return undefined;
 				}
 			}
 			key = key.pop();
 		}
-		return obj.value[key];
+		return obj._value[key];
 	}
 
 	/**
@@ -843,15 +860,20 @@ export class GawkObject extends GawkBase {
 		let obj = this;
 		if (Array.isArray(key)) {
 			for (let i = 0, len = key.length - 1; i < len; i++) {
-				let child = obj.value[key[i]];
+				let child = obj._value[key[i]];
 				if (!(child instanceof GawkObject)) {
-					child = obj.value[key[i]] = new GawkObject({}, this);
+					child = obj._value[key[i]] = new GawkObject({}, this);
 				}
 				obj = child;
 			}
 			key = key.pop();
 		}
-		const val = obj.value[key] = gawk(value, this);
+
+		if (obj._value[key] instanceof GawkBase) {
+			obj._value[key]._parent = null;
+		}
+
+		const val = obj._value[key] = gawk(value, this);
 		this.notify();
 		return val;
 	}
@@ -865,7 +887,9 @@ export class GawkObject extends GawkBase {
 	delete(key) {
 		if (this._value.hasOwnProperty(key)) {
 			const value = this._value[key];
-			value && value.detach();
+			if (value) { // check that value is not undefined
+				value._parent = null;
+			}
 			delete this._value[key];
 			this.notify();
 			return value;
@@ -878,7 +902,9 @@ export class GawkObject extends GawkBase {
 	 * @access public
 	 */
 	clear() {
-		Object.values(this._value).forEach(value => value.detach());
+		Object.keys(this._value).forEach(key => {
+			this._value[key]._parent = null;
+		});
 		this.notify({});
 		return this;
 	}
@@ -890,5 +916,42 @@ export class GawkObject extends GawkBase {
 	 */
 	keys() {
 		return Object.keys(this._value);
+	}
+
+	/**
+	 * Performs a shallow merge of one or more objects and/or GawkObjects into
+	 * this object.
+	 * @param {...Object|GawkObject} objs - One or more objects to merge in.
+	 * @returns {GawkObject}
+	 * @access public
+	 */
+	merge(...objs) {
+		if (!objs.length || objs.some(obj => {
+			return (typeof obj !== 'object' || obj === null || Array.isArray(obj)) && !(obj instanceof GawkObject);
+		})) {
+			throw new TypeError('Value must be an object or GawkObject');
+		}
+
+		//
+
+		return this;
+	}
+
+	/**
+	 * Performs a deep merge of another object or GawkObject into this object.
+	 * @param {...Object|GawkObject} objs - One or more objects to deeply merge in.
+	 * @returns {GawkObject}
+	 * @access public
+	 */
+	mergeDeep(...objs) {
+		if (!objs.length || objs.some(obj => {
+			return (typeof obj !== 'object' || obj === null || Array.isArray(obj)) && !(obj instanceof GawkObject);
+		})) {
+			throw new TypeError('Value must be an object or GawkObject');
+		}
+
+		//
+
+		return this;
 	}
 }

@@ -116,7 +116,7 @@ describe('array', () => {
 	});
 
 	describe('properties', () => {
-		it('.length', () => {
+		it('length', () => {
 			it('should have correct length', () => {
 				expect(gawk([]).length).to.equal(0);
 				expect(gawk(['a']).length).to.equal(1);
@@ -310,6 +310,7 @@ describe('array', () => {
 			const garr = gawk(arr);
 
 			garr.watch(evt => {
+				expect(evt.source).to.equal(garr);
 				expect(evt.target).to.equal(garr);
 
 				const val = evt.target.val;

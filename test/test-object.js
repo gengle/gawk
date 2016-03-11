@@ -18,7 +18,8 @@ describe('object', () => {
 				undef: undefined,
 				nul: null,
 				nan: NaN,
-				arr: ['a', 123, 4.56, null, undefined]
+				arr: ['a', 123, 4.56, null, undefined],
+				fn: function () {}
 			};
 			const gobj = gawk(obj);
 			expect(gobj).to.be.an.instanceof(GawkObject);
@@ -42,237 +43,336 @@ describe('object', () => {
 		});
 	});
 
-/*	it('should fail to gawk non-object arg', () => {
-		expect(() => {
-			new GawkObject('foo');
-		}).to.throw(TypeError);
+	describe('constructor casting', () => {
+		it('should throw TypeError for non-object value', () => {
+			expect(() => new GawkObject()).to.throw(TypeError);
+			expect(() => new GawkObject(null)).to.throw(TypeError);
+			expect(() => new GawkObject(true)).to.throw(TypeError);
+			expect(() => new GawkObject('foo')).to.throw(TypeError);
+			expect(() => new GawkObject(123)).to.throw(TypeError);
+			expect(() => new GawkObject(3.14)).to.throw(TypeError);
+			expect(() => new GawkObject(NaN)).to.throw(TypeError);
+			expect(() => new GawkObject(['a', 'b'])).to.throw(TypeError);
+			expect(() => new GawkObject(function () {})).to.throw(TypeError);
+		});
+
+		it('should throw TypeError for non-object gawk type', () => {
+			expect(() => new GawkObject(gawk())).to.throw(TypeError);
+			expect(() => new GawkObject(gawk(null))).to.throw(TypeError);
+			expect(() => new GawkObject(gawk(true))).to.throw(TypeError);
+			expect(() => new GawkObject(gawk('foo'))).to.throw(TypeError);
+			expect(() => new GawkObject(gawk(123))).to.throw(TypeError);
+			expect(() => new GawkObject(gawk(3.14))).to.throw(TypeError);
+			expect(() => new GawkObject(gawk(NaN))).to.throw(TypeError);
+			expect(() => new GawkObject(gawk(['a', 'b']))).to.throw(TypeError);
+			expect(() => new GawkObject(gawk(function () {}))).to.throw(TypeError);
+		});
+
+		it('should copy another gawked object', () => {
+			const obj = { foo: 'bar' };
+			const gobj = new GawkObject(gawk(obj));
+			expect(gobj.toJS()).to.deep.equal(obj);
+		});
 	});
 
-	it('should fail to gawk another non-object gawked type', () => {
-		expect(() => {
-			new GawkObject(gawk('hi'));
-		}).to.throw(TypeError);
-	});
-
-	it('should fail to set non-object', () => {
-		expect(() => {
+	describe('set casting', () => {
+		it('should throw TypeError when setting non-object value', () => {
 			const gobj = gawk({});
-			gobj.val = 'hi';
-		}).to.throw(TypeError);
-	});
-
-	it('should copy another gawked object', () => {
-		const obj = new GawkObject(gawk({ foo: 'bar' }));
-		expect(obj.val).to.deep.equal({ foo: 'bar' });
-	});
-
-	it('should get deeply nested string', () => {
-		const gobj = gawk({
-			foo: {
-				bar: 'baz'
-			}
-		});
-		const bar = gobj.get(['foo', 'bar']);
-		expect(bar).to.be.an.instanceof(GawkString);
-		expect(bar.val).to.equal('baz');
-	});
-
-	it('should get deeply nested array', () => {
-		const gobj = gawk({
-			foo: {
-				bar: ['a', 'b']
-			}
-		});
-		const bar = gobj.get(['foo', 'bar']);
-		expect(bar).to.be.an.instanceof(GawkArray);
-		expect(bar.val).to.deep.equal(['a', 'b']);
-	});
-
-	it('should be notified when value changes', () => {
-		const obj = {
-			foo: 'bar'
-		};
-		const gobj = gawk(obj);
-
-		gobj.watch(evt => {
-			expect(evt.target).to.equal(gobj);
-
-			const expected = {
-				foo: 'bar',
-				pi: 3.14
-			};
-
-			expect(evt.value).to.be.an.object;
-			expect(evt.value).to.deep.equal(expected);
-
-			const val = evt.target.val;
-			expect(val).to.be.an.object;
-			expect(val).to.deep.equal(expected);
+			expect(() => { gobj.val = undefined; }).to.throw(TypeError);
+			expect(() => { gobj.val = null; }).to.throw(TypeError);
+			expect(() => { gobj.val = true; }).to.throw(TypeError);
+			expect(() => { gobj.val = 'foo'; }).to.throw(TypeError);
+			expect(() => { gobj.val = 123; }).to.throw(TypeError);
+			expect(() => { gobj.val = 3.14; }).to.throw(TypeError);
+			expect(() => { gobj.val = NaN; }).to.throw(TypeError);
+			expect(() => { gobj.val = ['a', 'b']; }).to.throw(TypeError);
+			expect(() => { gobj.val = function () {}; }).to.throw(TypeError);
 		});
 
-		gobj.set('pi', 3.14);
-	});
-
-	it('should only notify if value is uniquely changed', () => {
-		const gobj = gawk({ foo: 'bar' });
-		let count = 0;
-
-		gobj.watch(evt => {
-			count++;
+		it('should throw TypeError when setting non-object gawk type', () => {
+			const gobj = gawk({});
+			expect(() => { gobj.val = gawk(); }).to.throw(TypeError);
+			expect(() => { gobj.val = gawk(null); }).to.throw(TypeError);
+			expect(() => { gobj.val = gawk(true); }).to.throw(TypeError);
+			expect(() => { gobj.val = gawk('foo'); }).to.throw(TypeError);
+			expect(() => { gobj.val = gawk(123); }).to.throw(TypeError);
+			expect(() => { gobj.val = gawk(3.14); }).to.throw(TypeError);
+			expect(() => { gobj.val = gawk(NaN); }).to.throw(TypeError);
+			expect(() => { gobj.val = gawk(['a', 'b']); }).to.throw(TypeError);
+			expect(() => { gobj.val = gawk(function () {}); }).to.throw(TypeError);
 		});
 
-		gobj.set('foo', 'baz');
-		expect(count).to.equal(1);
-
-		gobj.set('foo', 'baz');
-		expect(count).to.equal(1);
+		it('should copy another gawked object', () => {
+			const arr = gawk(['a', 'b']);
+			arr.val = gawk(['c', 'd']);
+			expect(arr.val).to.deep.equal(['c', 'd']);
+		});
 	});
 
-	it('should be notified when child changes', () => {
-		const obj = {
-			foo: {
-				bar: 'baz'
-			}
-		};
-		const gobj = gawk(obj);
+	describe('built-ins', () => {
+		it('should support toString()', () => {
+			const obj = { foo: 'bar' };
+			const gobj = gawk(obj);
+			expect(gobj.toString()).to.equal('[object Object]');
+		});
 
-		gobj.watch(evt => {
-			expect(evt.target).to.equal(gobj);
+		it('should support valueOf()', () => {
+			const obj = { foo: 'bar' };
+			const gobj = gawk(obj);
+			expect(gobj.valueOf()).to.deep.equal(obj);
+		});
+	});
 
-			const expected = {
-				foo: {
-					bar: 'baz',
+	describe('methods', () => {
+		describe('get()', () => {
+			it('should get a value by key', () => {
+				const str = gawk({ foo: 'bar' }).get('foo');
+				expect(str).to.be.an.instanceof(GawkString);
+				expect(str.val).to.equal('bar');
+			});
+
+			it('should get undefined for non-existent key', () => {
+				const undef = gawk({}).get('foo');
+				expect(undef).to.be.undefined;
+			});
+
+			it('should get a deeply nested value by key', () => {
+				const str = gawk({ foo: { bar: 'wiz' } }).get(['foo', 'bar']);
+				expect(str).to.be.an.instanceof(GawkString);
+				expect(str.val).to.equal('wiz');
+			});
+
+			it('should get undefined for non-existent deeply nested key', () => {
+				const undef = gawk({ foo: { } }).get(['foo', 'bar']);
+				expect(undef).to.be.undefined;
+			});
+		});
+
+		describe('set()', () => {
+			it('should set a value', () => {
+				const gobj = gawk({});
+				gobj.set('foo', 'bar');
+				expect(gobj.val).to.deep.equal({ foo: 'bar' });
+			});
+
+			it('should create child object and set its value', () => {
+				const gobj = gawk({});
+				gobj.set(['foo', 'bar'], 'wiz');
+				expect(gobj.val).to.deep.equal({ foo: { bar: 'wiz' } });
+			});
+
+			it('should override child value', () => {
+				const gobj = gawk({
+					foo: {
+						bar: 'baz'
+					}
+				});
+
+				gobj.set(['foo', 'bar'], 'wiz');
+
+				expect(gobj.val).to.deep.equal({ foo: { bar: 'wiz' } });
+			});
+		});
+
+		describe('delete()', () => {
+			it('should delete an existing key/value', () => {
+				const gobj = gawk({ foo: 'bar' });
+				const str = gobj.delete('foo');
+				expect(str).to.be.instanceof(GawkString);
+				expect(str.val).to.equal('bar');
+				expect(gobj.keys().length).to.equal(0);
+				expect(gobj.val).to.deep.equal({});
+			});
+
+			it('should not error trying to delete non-existent key', () => {
+				const gobj = gawk({});
+				const undef = gobj.delete('foo');
+				expect(undef).to.be.undefined;
+				expect(gobj.keys().length).to.equal(0);
+				expect(gobj.val).to.deep.equal({});
+			});
+		});
+
+		describe('clear()', () => {
+			it('should wipe all key/values', () => {
+				const gobj = gawk({
+					foo: 'bar',
 					pi: 3.14
-				}
-			};
+				});
 
-			expect(evt.value).to.be.an.object;
-			expect(evt.value).to.deep.equal(expected);
-
-			const val = evt.target.val;
-			expect(val).to.be.an.object;
-			expect(val).to.deep.equal(expected);
+				expect(gobj.keys().length).to.equal(2);
+				gobj.clear();
+				expect(gobj.keys().length).to.equal(0);
+				expect(gobj.val).to.deep.equal({});
+			});
 		});
 
-		gobj.get('foo').set('pi', 3.14);
-	});
-
-	it('should be notified when deep child changes', () => {
-		const gobj = gawk({});
-		const arr = gobj
-			.set('foo', {})
-			.set('bar', {})
-			.set('baz', []);
-
-		let count = 0;
-		gobj.watch(evt => {
-			count++;
+		describe('keys()', () => {
+			it('should return an array of the keys in the object', () => {
+				const gobj = gawk({
+					foo: 'bar',
+					pi: 3.14
+				});
+				const keys = gobj.keys();
+				expect(keys).to.be.an.array;
+				expect(keys).to.have.lengthOf(2);
+				expect(keys).to.deep.equal(['foo', 'pi']);
+			});
 		});
 
-		arr.push('a');
-		arr.push('b');
-		expect(count).to.equal(2);
-	});
-
-	it('should set child value', () => {
-		const gobj = gawk({});
-		let count = 0;
-
-		gobj.watch(evt => {
-			const val = evt.target.val;
-			expect(val).to.be.an.string;
-			expect(val.foo.bar).to.equal('wiz');
-			count++;
+		describe('merge()', () => {
+			it('should ...', () => {
+				//
+			});
 		});
 
-		gobj.set(['foo', 'bar'], 'wiz');
-
-		expect(count).to.equal(1);
+		describe('mergeDeep()', () => {
+			it('should ...', () => {
+				//
+			});
+		});
 	});
 
-	it('should override child value', () => {
-		const obj = {
-			foo: {
-				bar: 'baz'
-			}
-		};
-		const gobj = gawk(obj);
+	describe('notifications', () => {
+		it('should be notified when entire object changes', () => {
+			const gobj = gawk({ foo: 'bar' });
+			gobj.watch(evt => {
+				expect(evt.source).to.equal(gobj);
+				expect(evt.target).to.equal(gobj);
 
-		gobj.watch(evt => {
-			const val = evt.target.val;
-			expect(val).to.be.an.string;
-			expect(val.foo.bar).to.equal('wiz');
+				const obj = evt.target.val;
+				expect(obj).to.deep.equal({ bar: 'wiz' });
+			});
+			gobj.val = { bar: 'wiz' };
 		});
 
-		gobj.set(['foo', 'bar'], 'wiz');
-	});
+		it('should be notified when a key/value is added', () => {
+			const gobj = gawk({ foo: 'bar' });
+			gobj.watch(evt => {
+				expect(evt.source).to.equal(gobj);
+				expect(evt.target).to.equal(gobj);
 
-	it('should unwatch changes', () => {
-		const gobj = gawk({});
-		let count = 0;
-
-		const unwatch = gobj.watch(evt => {
-			count++;
+				const obj = evt.target.val;
+				expect(obj).to.deep.equal({ foo: 'bar', pi: 3.14 });
+			});
+			gobj.set('pi', 3.14);
 		});
 
-		gobj.set('a', 'b');
-		gobj.set('c', 'd');
+		it('should be notified when a key/value changes', () => {
+			const gobj = gawk({ foo: 'bar' });
+			gobj.watch(evt => {
+				expect(evt.source).to.equal(gobj);
+				expect(evt.target).to.equal(gobj);
 
-		unwatch();
-
-		gobj.set('e', 'f');
-		gobj.set('g', 'h');
-
-		expect(count).to.equal(2);
-	});
-
-	it('should delete key/value', () => {
-		const obj = {
-			foo: 'bar',
-			pi: 3.14
-		};
-		const gobj = gawk(obj);
-		let count = 0;
-
-		gobj.watch(evt => {
-			count++;
+				const obj = evt.target.val;
+				expect(obj).to.deep.equal({ foo: 'wiz' });
+			});
+			gobj.set('foo', 'wiz');
 		});
 
-		gobj.delete('foo');
+		it('should be notified when a key/value is deleted', () => {
+			const gobj = gawk({ foo: 'bar', pi: 3.14 });
+			gobj.watch(evt => {
+				expect(evt.source).to.equal(gobj);
+				expect(evt.target).to.equal(gobj);
 
-		expect(gobj.keys()).to.deep.equal(['pi']);
-		expect(count).to.equal(1);
+				const obj = evt.target.val;
+				expect(obj).to.deep.equal({ foo: 'bar' });
+			});
+			gobj.delete('pi');
+		});
 
-		gobj.delete('bar');
+		it('should not notify when a non-existent key/value is deleted', () => {
+			const gobj = gawk({});
+			gobj.watch(evt => {
+				throw new Error('Watcher should not have been invoked');
+			});
+			gobj.delete('foo');
+		});
 
-		expect(gobj.keys()).to.deep.equal(['pi']);
-		expect(count).to.equal(1);
+		it('should be notified when the object is cleared', () => {
+			const gobj = gawk({ foo: 'bar', pi: 3.14 });
+			gobj.watch(evt => {
+				expect(evt.source).to.equal(gobj);
+				expect(evt.target).to.equal(gobj);
+
+				const obj = evt.target.val;
+				expect(obj).to.be.an.object;
+				expect(obj).to.deep.equal({});
+			});
+			gobj.clear();
+		});
+
+		it('should only notify if key/value is uniquely changed', () => {
+			const gobj = gawk({ foo: 'bar' });
+			let count = 0;
+
+			gobj.watch(evt => {
+				count++;
+			});
+
+			gobj.set('foo', 'baz');
+			expect(count).to.equal(1);
+
+			gobj.set('foo', 'baz');
+			expect(count).to.equal(1);
+		});
+
+		it('should unwatch changes', () => {
+			const gobj = gawk({});
+			let count = 0;
+
+			const unwatch = gobj.watch(evt => {
+				count++;
+			});
+
+			gobj.set('a', 'b');
+			gobj.set('c', 'd');
+
+			unwatch();
+
+			gobj.set('e', 'f');
+			gobj.set('g', 'h');
+
+			expect(count).to.equal(2);
+		});
+
+		it('should be notified when child changes', () => {
+			const gobj = gawk({ foo: { bar: 'baz' } });
+			const nested = gobj.get('foo');
+
+			gobj.watch(evt => {
+				expect(evt.source).to.equal(gobj);
+				expect(evt.target).to.equal(nested);
+
+				const obj = evt.source.val;
+				expect(obj).to.be.an.object;
+				expect(obj).to.deep.equal({
+					foo: {
+						bar: 'baz',
+						pi: 3.14
+					}
+				});
+			});
+
+			nested.set('pi', 3.14);
+		});
+
+		it('should be notified when deep child changes', () => {
+			const gobj = gawk({});
+			const arr = gobj
+				.set('foo', {})
+				.set('bar', {})
+				.set('baz', []);
+
+			let count = 0;
+			gobj.watch(evt => {
+				count++;
+			});
+
+			arr.push('a');
+			arr.push('b');
+			expect(count).to.equal(2);
+		});
 	});
-
-	it('should clear object', () => {
-		const obj = {
-			foo: 'bar',
-			pi: 3.14
-		};
-		const gobj = gawk(obj);
-
-		expect(gobj.val).to.deep.equal(obj);
-		expect(gobj.keys()).to.deep.equal(Object.keys(obj));
-		gobj.clear();
-		expect(gobj.val).to.deep.equal({});
-		expect(gobj.keys()).to.deep.equal([]);
-	});
-
-	it('should support toString()', () => {
-		const obj = { foo: 'bar' };
-		const gobj = gawk(obj);
-		expect(gobj.toString()).to.equal('[object Object]');
-	});
-
-	it('should support valueOf()', () => {
-		const obj = { foo: 'bar' };
-		const gobj = gawk(obj);
-		expect(gobj.valueOf()).to.deep.equal(obj);
-	});
-	*/
 });

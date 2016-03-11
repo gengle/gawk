@@ -759,7 +759,7 @@ export class GawkObject extends GawkBase {
 			throw new TypeError('Value must be a GawkObject or non-gawk object');
 		}
 
-		const keys = isGawked ? value.keys() : Object.keys(value);
+		const keys = Object.keys(isGawked ? value._value : value);
 		if (keys.length) {
 			// the initial hash is for an unpopulated object, so we need compute
 			// the real hash and we're going to do it as we copy each element to
@@ -789,9 +789,9 @@ export class GawkObject extends GawkBase {
 	 * @access private
 	 */
 	detachChildren() {
-		Object.keys(this._value).forEach(key => {
+		for (let key of Object.keys(this._value)) {
 			this._value[key]._parent = null;
-		});
+		}
 	}
 
 	/**
@@ -801,9 +801,9 @@ export class GawkObject extends GawkBase {
 	 */
 	get val() {
 		const obj = {};
-		Object.keys(this._value).forEach(key => {
+		for (let key of Object.keys(this._value)) {
 			obj[key] = this._value[key].val;
-		});
+		}
 		return obj;
 	}
 
@@ -823,14 +823,8 @@ export class GawkObject extends GawkBase {
 		}
 
 		const newValue = {};
-		if (isGawked) {
-			value.keys().forEach(key => {
-				newValue[key] = gawk(value._value[key].val, this);
-			});
-		} else {
-			Object.keys(value).forEach(key => {
-				newValue[key] = gawk(value[key], this);
-			});
+		for (let key of Object.keys(isGawked ? value._value : value)) {
+			newValue[key] = gawk(isGawked ? value._value[key].val : value[key], this);
 		}
 		this.notify(newValue);
 	}
@@ -877,7 +871,7 @@ export class GawkObject extends GawkBase {
 			key = key.pop();
 		}
 
-		if (obj._value[key] instanceof GawkBase) {
+		if (obj._value[key]) {
 			obj._value[key]._parent = null;
 		}
 
@@ -910,9 +904,7 @@ export class GawkObject extends GawkBase {
 	 * @access public
 	 */
 	clear() {
-		Object.keys(this._value).forEach(key => {
-			this._value[key]._parent = null;
-		});
+		this.detachChildren();
 		this.notify({});
 		return this;
 	}
@@ -926,6 +918,39 @@ export class GawkObject extends GawkBase {
 		return Object.keys(this._value);
 	}
 
+	mix(objs, deep) {
+		if (!objs.length || objs.some(obj => {
+			return typeof obj !== 'object' || obj === null || Array.isArray(obj) || (obj instanceof GawkBase && !(obj instanceof GawkObject));
+		})) {
+			throw new TypeError('Value must be an object or GawkObject');
+		}
+
+		for (let obj of objs) {
+			this.mixer(this._value, obj, deep);
+		}
+
+		this.notify();
+		return this;
+	}
+
+	mixer(dest, src, deep) {
+		const isGawked = src instanceof GawkObject;
+		for (let key of Object.keys(isGawked ? src._value : src)) {
+			if (dest[key]) {
+				dest[key]._parent = null;
+			}
+			const srcValue = isGawked ? src._value[key].val : src[key];
+			if (deep && ((typeof srcValue === 'object' && srcValue !== null && !Array.isArray(srcValue)) || srcValue instanceof GawkObject)) {
+				if (!dest[key]) {
+					dest[key] = {};
+				}
+				this.mixer(dest[key], srcValue, true);
+			} else {
+				dest[key] = gawk(srcValue, this);
+			}
+		}
+	}
+
 	/**
 	 * Performs a shallow merge of one or more objects and/or GawkObjects into
 	 * this object.
@@ -934,32 +959,7 @@ export class GawkObject extends GawkBase {
 	 * @access public
 	 */
 	merge(...objs) {
-		if (!objs.length || objs.some(obj => {
-			return typeof obj !== 'object' || obj === null || Array.isArray(obj) || (obj instanceof GawkBase && !(obj instanceof GawkObject));
-		})) {
-			throw new TypeError('Value must be an object or GawkObject');
-		}
-
-		objs.forEach(obj => {
-			if (obj instanceof GawkObject) {
-				obj.keys().forEach(key => {
-					if (this._value.hasOwnProperty(key)) {
-						this._value[key]._parent = null;
-					}
-					this._value[key] = gawk(obj._value[key].val, this);
-				});
-			} else {
-				Object.keys(obj).forEach(key => {
-					if (this._value.hasOwnProperty(key)) {
-						this._value[key]._parent = null;
-					}
-					this._value[key] = gawk(obj[key], this);
-				});
-			}
-		});
-
-		this.notify();
-		return this;
+		return this.mix(objs);
 	}
 
 	/**
@@ -969,15 +969,6 @@ export class GawkObject extends GawkBase {
 	 * @access public
 	 */
 	mergeDeep(...objs) {
-		if (!objs.length || objs.some(obj => {
-			return (typeof obj !== 'object' || obj === null || Array.isArray(obj)) && !(obj instanceof GawkObject);
-		})) {
-			throw new TypeError('Value must be an object or GawkObject');
-		}
-
-		//
-
-		this.notify();
-		return this;
+		return this.mix(objs, true);
 	}
 }

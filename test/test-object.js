@@ -262,6 +262,41 @@ describe('object', () => {
 				expect(() => { gobj.merge('foo'); }).to.throw(TypeError);
 				expect(() => { gobj.merge(gawk('foo')); }).to.throw(TypeError);
 			});
+
+			it('should shallow merge', () => {
+				const gobj = gawk({ foo: { bar: { baz: 'wiz' } } });
+				gobj.merge({ foo: { pi: 3.14 } });
+				expect(gobj.val).to.deep.equal({ foo: { pi: 3.14 }});
+			});
+
+			it('should notify parent when child has a merge', () => {
+				const gobj = gawk({});
+				let count = 0;
+
+				gobj.watch(evt => {
+					count++;
+				});
+
+				const child = gawk({});
+				gobj.set('foo', child);
+				// { foo: {} }
+				expect(count).to.equal(1);
+
+				const bar = gawk({ bar: 'wiz' });
+				child.merge(bar);
+				// { foo: { bar: 'wiz' } }
+				expect(count).to.equal(2);
+
+				const foo = gobj.get('foo');
+				expect(foo._parent).to.equal(gobj);
+
+				child.merge({ bar: 'wow' });
+				// { foo: { bar: 'wow' } }
+				expect(count).to.equal(3);
+				expect(bar._parent).to.be.null;
+
+				expect(gobj.val).to.deep.equal({ foo: { bar: 'wow' } });
+			});
 		});
 
 		describe('mergeDeep()', () => {

@@ -38,7 +38,7 @@ const obj = gawk({
 
 obj.watch(evt => {
     console.info('object changed!');
-    console.info('new value =', evt.value);
+    console.info('new value =', evt.target.toJS());
 });
 
 obj.set('foo', 'baz');
@@ -57,7 +57,7 @@ const obj = gawk({
 
 obj.watch(evt => {
     console.info('object changed!');
-    console.info('new value =', evt.value);
+    console.info('new value =', evt.target.toJS());
 });
 
 obj.get(['foo', 'bar']).push('c', 'd');

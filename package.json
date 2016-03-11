@@ -1,6 +1,6 @@
 {
   "name": "gawk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Observable JavaScript object model",
   "main": "./dist/index.js",
   "author": "Chris Barber <chris@cb1inc.com> (https://github.com/cb1kenobi)",

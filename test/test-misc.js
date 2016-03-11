@@ -43,6 +43,7 @@ describe('misc', () => {
 		expect(gawk(NaN).toJSON()).to.equal('null');
 		expect(gawk(['a', 'b']).toJSON()).to.equal('["a","b"]');
 		expect(gawk({ foo: 'bar' }).toJSON()).to.equal('{"foo":"bar"}');
+		expect(gawk({ foo: 'bar' }).toJSON(true)).to.equal('{\n  "foo": "bar"\n}');
 		expect(gawk(function () {}).toJSON()).to.be.undefined;
 	});
 });

@@ -245,6 +245,23 @@ describe('object', () => {
 				gobj.merge({ baz: 'wiz' }, gawk({ pi: 3.14 }), { num: 123 }, gawk({ arr: ['a', 'b'] }));
 				expect(gobj.val).to.deep.equal({ foo: 'bar', baz: 'wiz', pi: 3.14, num: 123, arr: ['a', 'b'] });
 			});
+
+			it('should merge and overwrite', () => {
+				const gobj = gawk({ foo: 'bar' });
+				gobj.merge({ foo: 'wiz' });
+				expect(gobj.val).to.deep.equal({ foo: 'wiz' });
+			});
+
+			it('should fail to merge if no args', () => {
+				const gobj = gawk({});
+				expect(() => { gobj.merge(); }).to.throw(TypeError);
+			});
+
+			it('should fail to merge non-object and non-GawkObjects types', () => {
+				const gobj = gawk({});
+				expect(() => { gobj.merge('foo'); }).to.throw(TypeError);
+				expect(() => { gobj.merge(gawk('foo')); }).to.throw(TypeError);
+			});
 		});
 
 		describe('mergeDeep()', () => {

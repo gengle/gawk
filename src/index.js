@@ -151,11 +151,12 @@ export class GawkBase {
 	/**
 	 * Returns the value as a stringified JSON structure. Note that functions
 	 * will be omitted.
+	 * @param {Boolean} pretty - When `true`, adds whitespace to stringified output.
 	 * @returns {String}
 	 * @access public
 	 */
-	toJSON() {
-		return JSON.stringify(this.val);
+	toJSON(pretty) {
+		return JSON.stringify(this.val, null, pretty ? '  ' : undefined);
 	}
 
 	/**
@@ -473,7 +474,7 @@ export class GawkFunction extends GawkBase {
 
 	/**
 	 * Sets the value.
-	 * @param {*} value - The value to set.
+	 * @param {Function} value - The value to set.
 	 * @access public
 	 */
 	set val(value) {
@@ -495,7 +496,7 @@ export class GawkFunction extends GawkBase {
 
 	/**
 	 * Runs the function.
-	 * @param {*} [...args] - Zero or more arguments to pass in to the function.
+	 * @param {...*} [args] - Zero or more arguments to pass in to the function.
 	 * @returns {*}
 	 * @access public
 	 */
@@ -702,7 +703,7 @@ export class GawkArray extends GawkBase {
 
 	/**
 	 * Adds one or more items to the beginning of the array.
-	 * @param {*} [...items] - One or more items to add.
+	 * @param {...*} [items] - One or more items to add.
 	 * @returns {Number} The new length.
 	 * @access public
 	 */
@@ -934,7 +935,7 @@ export class GawkObject extends GawkBase {
 	 */
 	merge(...objs) {
 		if (!objs.length || objs.some(obj => {
-			return (typeof obj !== 'object' || obj === null || Array.isArray(obj)) && !(obj instanceof GawkObject);
+			return typeof obj !== 'object' || obj === null || Array.isArray(obj) || (obj instanceof GawkBase && !(obj instanceof GawkObject));
 		})) {
 			throw new TypeError('Value must be an object or GawkObject');
 		}

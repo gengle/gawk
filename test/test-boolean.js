@@ -90,6 +90,12 @@ describe('boolean', () => {
 			bool.val = gawk(false);
 			expect(bool.val).to.be.false;
 		});
+
+		it('should set from Boolean object', () => {
+			const bool = gawk(true);
+			bool.val = new Boolean(false);
+			expect(bool.val).to.be.false;
+		});
 	});
 
 	describe('built-ins', () => {

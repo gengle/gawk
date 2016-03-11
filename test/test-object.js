@@ -30,16 +30,18 @@ describe('object', () => {
 		});
 
 		it('should gawk object with nested objects', () => {
-			const obj = {
-				foo: {
-					bar: 'baz'
-				}
-			};
+			const obj = { foo: { bar: 'baz' } };
 			const gobj = gawk(obj);
 			expect(gobj).to.be.an.instanceof(GawkObject);
 			const val = gobj.val;
 			expect(val).to.be.an.object;
 			expect(val).to.deep.equal(obj);
+		});
+
+		it('should set a gawk object', () => {
+			const gobj = gawk({ foo: 'bar' });
+			gobj.val = gawk({ pi: 3.14 });
+			expect(gobj.val).to.deep.equal({ pi: 3.14 });
 		});
 	});
 
@@ -136,10 +138,15 @@ describe('object', () => {
 				expect(undef).to.be.undefined;
 			});
 
-			it('should get a deeply nested value by key', () => {
+			it('should get a deeply nested object by key', () => {
 				const str = gawk({ foo: { bar: 'wiz' } }).get(['foo', 'bar']);
 				expect(str).to.be.an.instanceof(GawkString);
 				expect(str.val).to.equal('wiz');
+			});
+
+			it('should get a deeply nested non-object by key', () => {
+				const undef = gawk({ foo: 'wiz' }).get(['foo', 'bar']);
+				expect(undef).to.be.undefined;
 			});
 
 			it('should get undefined for non-existent deeply nested key', () => {
@@ -221,8 +228,22 @@ describe('object', () => {
 		});
 
 		describe('merge()', () => {
-			it('should ...', () => {
-				//
+			it('should merge a JS object', () => {
+				const gobj = gawk({ foo: 'bar' });
+				gobj.merge({ pi: 3.14 });
+				expect(gobj.val).to.deep.equal({ foo: 'bar', pi: 3.14 });
+			});
+
+			it('should merge a GawkObject', () => {
+				const gobj = gawk({ foo: 'bar' });
+				gobj.merge(gawk({ pi: 3.14 }));
+				expect(gobj.val).to.deep.equal({ foo: 'bar', pi: 3.14 });
+			});
+
+			it('should merge multiple JS objects and GawkObjects', () => {
+				const gobj = gawk({ foo: 'bar' });
+				gobj.merge({ baz: 'wiz' }, gawk({ pi: 3.14 }), { num: 123 }, gawk({ arr: ['a', 'b'] }));
+				expect(gobj.val).to.deep.equal({ foo: 'bar', baz: 'wiz', pi: 3.14, num: 123, arr: ['a', 'b'] });
 			});
 		});
 

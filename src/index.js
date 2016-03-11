@@ -4,6 +4,7 @@ import 'source-map-support/register';
 /*
  * Golden Rules:
  *  - Internal value must always be a JS data type, not a gawked type.
+ *  - All gawk types must define a `val` setter and getter.
  *  - Gawk containers (such as GawkArray and GawkObject) must recompute their
  *    hash again if mutated or if a child changes.
  *  - Gawk containers must implement their own hasher().
@@ -86,7 +87,7 @@ export class GawkBase {
 			 * @type {String}
 			 * @access private
 			 */
-			_hash: { enumerable: true, value: typeof value === 'undefined' ? null : hash(value), writable: true },
+			_hash: { enumerable: true, value: this.hasher(value), writable: true },
 
 			/**
 			 * The actual value. This will always be a non-gawk type.
@@ -821,9 +822,15 @@ export class GawkObject extends GawkBase {
 		}
 
 		const newValue = {};
-		Object.keys(value).forEach(key => {
-			newValue[key] = gawk(isGawked ? value._value[key].val : value[key], this);
-		});
+		if (isGawked) {
+			value.keys().forEach(key => {
+				newValue[key] = gawk(value._value[key].val, this);
+			});
+		} else {
+			Object.keys(value).forEach(key => {
+				newValue[key] = gawk(value[key], this);
+			});
+		}
 		this.notify(newValue);
 	}
 
@@ -932,8 +939,25 @@ export class GawkObject extends GawkBase {
 			throw new TypeError('Value must be an object or GawkObject');
 		}
 
-		//
+		objs.forEach(obj => {
+			if (obj instanceof GawkObject) {
+				obj.keys().forEach(key => {
+					if (this._value.hasOwnProperty(key)) {
+						this._value[key]._parent = null;
+					}
+					this._value[key] = gawk(obj._value[key].val, this);
+				});
+			} else {
+				Object.keys(obj).forEach(key => {
+					if (this._value.hasOwnProperty(key)) {
+						this._value[key]._parent = null;
+					}
+					this._value[key] = gawk(obj[key], this);
+				});
+			}
+		});
 
+		this.notify();
 		return this;
 	}
 
@@ -952,6 +976,7 @@ export class GawkObject extends GawkBase {
 
 		//
 
+		this.notify();
 		return this;
 	}
 }

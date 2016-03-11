@@ -9,17 +9,15 @@
 [![Dev Deps][david-dev-image]][david-dev-url]
 
 Gawk is a observable model that wraps JavaScript data types. Once a JavaScript
-value is wrapped, it allows you to listen for changes.
+value is wrapped, it allows you to listen for changes. You can observe deeply
+nested objects too.
 
 Gawk supports the common built-in data types such as string, boolean, number,
 array, object, function, null, and undefined. Anything that you can represent
 in a JSON object, you can gawk.
 
-You can observe deeply nested objects too. Gawked arrays, objects, and functions
-have unique methods for common tasks. For example, `GawkArray` instances have
-`push()` and `pop()` methods.
-
-Gawk should work in web browsers, but it's not tested.
+Gawked arrays, objects, and functions have unique methods for common tasks. For
+example, `GawkArray` instances have `push()` and `pop()` methods.
 
 > Note: gawk requires Node.js 4 or newer.
 

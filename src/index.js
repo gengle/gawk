@@ -357,8 +357,8 @@ export class GawkNumber extends GawkBase {
 	 * @param {GawkBase} [parent] - The parent gawk object to notify of changes.
 	 * @access public
 	 */
-	constructor(value, parent) {
-		super(typeof value === 'undefined' || value instanceof GawkUndefined ? 0 : value instanceof GawkBase ? +value.val : +value, parent);
+	constructor(value = 0, parent) {
+		super(value instanceof GawkUndefined ? 0 : value instanceof GawkBase ? +value.val : +value, parent);
 	}
 
 	/**
@@ -390,7 +390,7 @@ export class GawkBoolean extends GawkBase {
 	 * @param {GawkBase} [parent] - The parent gawk object to notify of changes.
 	 * @access public
 	 */
-	constructor(value, parent) {
+	constructor(value = false, parent) {
 		super(value instanceof Boolean ? value.valueOf() : value instanceof GawkBase ? !!value.val : !!value, parent);
 	}
 
@@ -424,6 +424,9 @@ export class GawkString extends GawkBase {
 	 * @access public
 	 */
 	constructor(value, parent) {
+		if (typeof value === 'undefined' || value instanceof GawkUndefined) {
+			value = '';
+		}
 		super(String(value instanceof GawkBase ? value.val : value), parent);
 	}
 
@@ -442,6 +445,9 @@ export class GawkString extends GawkBase {
 	 * @access public
 	 */
 	set val(value) {
+		if (typeof value === 'undefined' || value instanceof GawkUndefined) {
+			value = '';
+		}
 		this.notify(String(value instanceof GawkBase ? value.val : value));
 	}
 }
@@ -516,6 +522,9 @@ export class GawkDate extends GawkBase {
 	 * @access public
 	 */
 	constructor(value, parent) {
+		if (typeof value === 'undefined' || value instanceof GawkUndefined) {
+			value = new Date;
+		}
 		if (!(value instanceof Date) && !(value instanceof GawkDate)) {
 			throw new TypeError('Value must be a date');
 		}
@@ -554,7 +563,7 @@ export class GawkArray extends GawkBase {
 	 * @param {GawkBase} [parent] - The parent gawk object to notify of changes.
 	 * @access public
 	 */
-	constructor(value, parent) {
+	constructor(value = [], parent) {
 		if (!Array.isArray(value) && !(value instanceof GawkArray)) {
 			throw new TypeError('Value must be an array');
 		}
@@ -662,7 +671,7 @@ export class GawkArray extends GawkBase {
 	 */
 	delete(index) {
 		const value = this._value.splice(index, 1)[0];
-		if (value) { // check that value is not undefined
+		if (value instanceof GawkBase) {
 			value._parent = null;
 		}
 		this.notify();
@@ -746,7 +755,7 @@ export class GawkObject extends GawkBase {
 	 * @param {GawkBase} [parent] - The parent gawk object to notify of changes.
 	 * @access public
 	 */
-	constructor(value, parent) {
+	constructor(value = {}, parent) {
 		if (typeof value !== 'object' || value === null || Array.isArray(value)) {
 			throw new TypeError('Value must be an object');
 		}
@@ -871,7 +880,7 @@ export class GawkObject extends GawkBase {
 			key = key.pop();
 		}
 
-		if (obj._value[key]) {
+		if (obj._value[key] instanceof GawkBase) {
 			obj._value[key]._parent = null;
 		}
 
@@ -889,7 +898,7 @@ export class GawkObject extends GawkBase {
 	delete(key) {
 		if (this._value.hasOwnProperty(key)) {
 			const value = this._value[key];
-			if (value) { // check that value is not undefined
+			if (value instanceof GawkBase) {
 				value._parent = null;
 			}
 			delete this._value[key];
@@ -918,6 +927,13 @@ export class GawkObject extends GawkBase {
 		return Object.keys(this._value);
 	}
 
+	/**
+	 * Mixes an array of objects or GawkObjects into this GawkObject.
+	 * @param {Array} objs - An array of objects or GawkObjects.
+	 * @param {Boolean} [deep=false] - When true, mixes subobjects into each other.
+	 * @returns {GawkObject}
+	 * @access private
+	 */
 	mix(objs, deep) {
 		if (!objs.length || objs.some(obj => {
 			return typeof obj !== 'object' || obj === null || Array.isArray(obj) || (obj instanceof GawkBase && !(obj instanceof GawkObject));
@@ -925,30 +941,51 @@ export class GawkObject extends GawkBase {
 			throw new TypeError('Value must be an object or GawkObject');
 		}
 
+		let changed = false;
+
+		/**
+		 * Mix an object or GawkObject into a GawkObject.
+		 * @param {GawkObject} dest
+		 * @param {Object} src
+		 */
+		const mixer = (dest, src) => {
+			for (let key of Object.keys(src)) {
+				const srcValue = src[key] instanceof GawkBase ? src[key]._value : src[key];
+				if (deep && ((typeof srcValue === 'object' && srcValue !== null && !Array.isArray(srcValue) && !(srcValue instanceof GawkBase)) || srcValue instanceof GawkObject)) {
+					if (!(dest._value[key] instanceof GawkObject)) {
+						dest._value[key] = new GawkObject({}, dest);
+					}
+					mixer(dest._value[key], srcValue);
+				} else {
+					dest._value[key] = gawk(srcValue, dest);
+				}
+			}
+
+			// manually recompute the hash of this dest object now that we're
+			// finished adding key/values to it
+			const newHash = dest.hasher(dest._value);
+			if (newHash !== dest._hash) {
+				changed = true;
+				dest._hash = newHash;
+			}
+		};
+
 		for (let obj of objs) {
-			this.mixer(this._value, obj, deep);
+			mixer(this, obj instanceof GawkObject ? obj._value : obj);
+		}
+
+		if (changed) {
+			// We know a child hash changed, but because the last loop of mixer()
+			// set the correct object hash, notify() won't think anything changed.
+			//
+			// So we just set the hash to something that rocks and notify() will
+			// recompute the correct hash, detect the change, and send out the
+			// event notifications.
+			this._hash = 'gawk rocks';
 		}
 
 		this.notify();
 		return this;
-	}
-
-	mixer(dest, src, deep) {
-		const isGawked = src instanceof GawkObject;
-		for (let key of Object.keys(isGawked ? src._value : src)) {
-			if (dest[key]) {
-				dest[key]._parent = null;
-			}
-			const srcValue = isGawked ? src._value[key].val : src[key];
-			if (deep && ((typeof srcValue === 'object' && srcValue !== null && !Array.isArray(srcValue)) || srcValue instanceof GawkObject)) {
-				if (!dest[key]) {
-					dest[key] = {};
-				}
-				this.mixer(dest[key], srcValue, true);
-			} else {
-				dest[key] = gawk(srcValue, this);
-			}
-		}
 	}
 
 	/**

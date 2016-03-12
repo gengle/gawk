@@ -1,7 +1,7 @@
 import { gawk, GawkFunction } from '../src/index';
 
 describe('function', () => {
-	describe('gawk()', () => {
+	describe('gawking', () => {
 		it('should gawk a function', () => {
 			const fn = gawk(function () {});
 			expect(fn).to.be.an.instanceof(GawkFunction);

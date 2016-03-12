@@ -1,7 +1,7 @@
 import { gawk, GawkNull } from '../src/index';
 
 describe('null', () => {
-	describe('gawk()', () => {
+	describe('gawking', () => {
 		it('should gawk null', () => {
 			const nil = gawk(null);
 			expect(nil).to.be.an.instanceof(GawkNull);

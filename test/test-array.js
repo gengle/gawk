@@ -1,7 +1,7 @@
 import { gawk, GawkArray, GawkString } from '../src/index';
 
 describe('array', () => {
-	describe('gawk()', () => {
+	describe('gawking', () => {
 		it('should gawk empty array', () => {
 			const arr = [];
 			const gobj = gawk(arr);
@@ -34,11 +34,15 @@ describe('array', () => {
 			expect(val).to.have.lengthOf(7);
 			expect(val).to.deep.equal(arr);
 		});
+
+		it('should create a gawk object without an explicit value', () => {
+			const gobj = new GawkArray;
+			expect(gobj.val).to.deep.equal([]);
+		});
 	});
 
 	describe('constructor casting', () => {
 		it('should throw TypeError for non-array value', () => {
-			expect(() => new GawkArray()).to.throw(TypeError);
 			expect(() => new GawkArray(null)).to.throw(TypeError);
 			expect(() => new GawkArray(true)).to.throw(TypeError);
 			expect(() => new GawkArray('foo')).to.throw(TypeError);
@@ -50,7 +54,6 @@ describe('array', () => {
 		});
 
 		it('should throw TypeError for non-array gawk type', () => {
-			expect(() => new GawkArray(gawk())).to.throw(TypeError);
 			expect(() => new GawkArray(gawk(null))).to.throw(TypeError);
 			expect(() => new GawkArray(gawk(true))).to.throw(TypeError);
 			expect(() => new GawkArray(gawk('foo'))).to.throw(TypeError);

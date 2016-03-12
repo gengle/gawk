@@ -1,7 +1,7 @@
 import { gawk, GawkNumber } from '../src/index';
 
 describe('number', () => {
-	describe('gawk()', () => {
+	describe('gawking', () => {
 		it('should gawk zero', () => {
 			const num = gawk(0);
 			expect(num).to.be.an.instanceof(GawkNumber);

@@ -1,7 +1,7 @@
 import { gawk, GawkString } from '../src/index';
 
 describe('string', () => {
-	describe('gawk()', () => {
+	describe('gawking', () => {
 		it('should gawk an empty string', () => {
 			const str = gawk('');
 			expect(str).to.be.an.instanceof(GawkString);
@@ -23,7 +23,7 @@ describe('string', () => {
 
 	describe('constructor casting', () => {
 		it('should cast non-string value', () => {
-			expect(new GawkString().val).to.equal('undefined');
+			expect(new GawkString().val).to.equal('');
 			expect(new GawkString(null).val).to.equal('null');
 			expect(new GawkString(true).val).to.equal('true');
 			expect(new GawkString(123).val).to.equal('123');
@@ -35,7 +35,7 @@ describe('string', () => {
 		});
 
 		it('should cast another gawk type', () => {
-			expect(new GawkString(gawk()).val).to.equal('undefined');
+			expect(new GawkString(gawk()).val).to.equal('');
 			expect(new GawkString(gawk(null)).val).to.equal('null');
 			expect(new GawkString(gawk(true)).val).to.equal('true');
 			expect(new GawkString(gawk(123)).val).to.equal('123');
@@ -55,7 +55,7 @@ describe('string', () => {
 	describe('set casting', () => {
 		it('should cast and set non-string value', () => {
 			const str = gawk('');
-			str.val = undefined;         expect(str.val).to.equal('undefined');
+			str.val = undefined;         expect(str.val).to.equal('');
 			str.val = null;              expect(str.val).to.equal('null');
 			str.val = true;              expect(str.val).to.equal('true');
 			str.val = 123;               expect(str.val).to.equal('123');
@@ -68,7 +68,7 @@ describe('string', () => {
 
 		it('should cast and set another gawk type', () => {
 			const str = gawk('');
-			str.val = gawk();                  expect(str.val).to.equal('undefined');
+			str.val = gawk();                  expect(str.val).to.equal('');
 			str.val = gawk(null);              expect(str.val).to.equal('null');
 			str.val = gawk(true);              expect(str.val).to.equal('true');
 			str.val = gawk(123);               expect(str.val).to.equal('123');

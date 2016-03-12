@@ -1,7 +1,7 @@
 import { gawk, GawkDate } from '../src/index';
 
 describe('date', () => {
-	describe('gawk()', () => {
+	describe('gawking', () => {
 		it('should gawk a date', () => {
 			const date = new Date;
 			const gobj = gawk(date);
@@ -15,7 +15,6 @@ describe('date', () => {
 
 	describe('constructor casting', () => {
 		it('should throw TypeError for non-date value', () => {
-			expect(() => new GawkDate()).to.throw(TypeError);
 			expect(() => new GawkDate(null)).to.throw(TypeError);
 			expect(() => new GawkDate(true)).to.throw(TypeError);
 			expect(() => new GawkDate('foo')).to.throw(TypeError);
@@ -28,7 +27,6 @@ describe('date', () => {
 		});
 
 		it('should throw TypeError for non-date gawk type', () => {
-			expect(() => new GawkDate(gawk())).to.throw(TypeError);
 			expect(() => new GawkDate(gawk(null))).to.throw(TypeError);
 			expect(() => new GawkDate(gawk(true))).to.throw(TypeError);
 			expect(() => new GawkDate(gawk('foo'))).to.throw(TypeError);
@@ -45,6 +43,11 @@ describe('date', () => {
 			const gdate = new GawkDate(gawk(date));
 			expect(gdate.val.getTime()).to.equal(date.getTime());
 			expect(gdate.val).to.not.equal(date);
+		});
+
+		it('should create a gawk object without an explicit value', () => {
+			const gobj = new GawkDate;
+			expect(gobj.val).to.be.a.date;
 		});
 	});
 

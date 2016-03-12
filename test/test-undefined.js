@@ -1,7 +1,7 @@
 import { gawk, GawkUndefined } from '../src/index';
 
 describe('undefined', () => {
-	describe('gawk()', () => {
+	describe('gawking', () => {
 		it('should gawk undefined', () => {
 			const undef = gawk();
 			expect(undef).to.be.an.instanceof(GawkUndefined);

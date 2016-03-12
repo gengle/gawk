@@ -1,7 +1,7 @@
 import { gawk, GawkObject, GawkString, GawkArray } from '../src/index';
 
 describe('object', () => {
-	describe('gawk()', () => {
+	describe('gawking', () => {
 		it('should gawk empty object', () => {
 			const obj = {};
 			const gobj = gawk(obj);
@@ -43,11 +43,15 @@ describe('object', () => {
 			gobj.val = gawk({ pi: 3.14 });
 			expect(gobj.val).to.deep.equal({ pi: 3.14 });
 		});
+
+		it('should create a gawk object without an explicit value', () => {
+			const gobj = new GawkObject;
+			expect(gobj.val).to.deep.equal({});
+		});
 	});
 
 	describe('constructor casting', () => {
 		it('should throw TypeError for non-object value', () => {
-			expect(() => new GawkObject()).to.throw(TypeError);
 			expect(() => new GawkObject(null)).to.throw(TypeError);
 			expect(() => new GawkObject(true)).to.throw(TypeError);
 			expect(() => new GawkObject('foo')).to.throw(TypeError);
@@ -59,7 +63,6 @@ describe('object', () => {
 		});
 
 		it('should throw TypeError for non-object gawk type', () => {
-			expect(() => new GawkObject(gawk())).to.throw(TypeError);
 			expect(() => new GawkObject(gawk(null))).to.throw(TypeError);
 			expect(() => new GawkObject(gawk(true))).to.throw(TypeError);
 			expect(() => new GawkObject(gawk('foo'))).to.throw(TypeError);
@@ -297,11 +300,113 @@ describe('object', () => {
 
 				expect(gobj.val).to.deep.equal({ foo: { bar: 'wow' } });
 			});
+
+			it('should only notify parent one time when merging multiple objects', () => {
+				const gobj = gawk({ foo: 'bar' });
+				let count = 0;
+
+				gobj.watch(evt => {
+					count++;
+				});
+
+				gobj.merge({ baz: 'wiz' }, gawk({ pi: 3.14 }), { num: 123 }, gawk({ arr: ['a', 'b'] }));
+				expect(gobj.val).to.deep.equal({ foo: 'bar', baz: 'wiz', pi: 3.14, num: 123, arr: ['a', 'b'] });
+				expect(count).to.equal(1);
+			});
 		});
 
 		describe('mergeDeep()', () => {
-			it('should ...', () => {
-				//
+			it('should merge a JS object', () => {
+				const gobj = gawk({ foo: 'bar' });
+				gobj.mergeDeep({ pi: 3.14 });
+				expect(gobj.val).to.deep.equal({ foo: 'bar', pi: 3.14 });
+			});
+
+			it('should merge a GawkObject', () => {
+				const gobj = gawk({ foo: 'bar' });
+				gobj.mergeDeep(gawk({ pi: 3.14 }));
+				expect(gobj.val).to.deep.equal({ foo: 'bar', pi: 3.14 });
+			});
+
+			it('should merge multiple JS objects and GawkObjects', () => {
+				const gobj = gawk({ foo: 'bar' });
+				gobj.mergeDeep({ baz: 'wiz' }, gawk({ pi: 3.14 }), { num: 123 }, gawk({ arr: ['a', 'b'] }));
+				expect(gobj.val).to.deep.equal({ foo: 'bar', baz: 'wiz', pi: 3.14, num: 123, arr: ['a', 'b'] });
+			});
+
+			it('should merge and overwrite', () => {
+				const gobj = gawk({ foo: 'bar' });
+				gobj.mergeDeep({ foo: 'wiz' });
+				expect(gobj.val).to.deep.equal({ foo: 'wiz' });
+			});
+
+			it('should fail to merge if no args', () => {
+				const gobj = gawk({});
+				expect(() => { gobj.mergeDeep(); }).to.throw(TypeError);
+			});
+
+			it('should fail to merge non-object and non-GawkObjects types', () => {
+				const gobj = gawk({});
+				expect(() => { gobj.mergeDeep('foo'); }).to.throw(TypeError);
+				expect(() => { gobj.mergeDeep(gawk('foo')); }).to.throw(TypeError);
+			});
+
+			it('should deep merge', () => {
+				const gobj = gawk({ foo: { bar: { baz: 'wiz' } } });
+				gobj.mergeDeep({ foo: { pi: 3.14, biz: { wap: 'fip' } } });
+				expect(gobj.val).to.deep.equal({
+					foo: {
+						bar: {
+							baz: 'wiz'
+						},
+						pi: 3.14,
+						biz: {
+							wap: 'fip'
+						}
+					}
+				});
+			});
+
+			it('should notify parent one time when child has a deep merge', () => {
+				const gobj = gawk({});
+				let count = 0;
+
+				gobj.watch(evt => {
+					count++;
+				});
+
+				const child = gawk({ bar: { pow: 123 } });
+				gobj.set('foo', child);
+				// { foo: { bar: { pow: 123 } } }
+				expect(count).to.equal(1);
+
+				const bar = gawk({ bar: { wiz: 456 } });
+				child.mergeDeep(bar);
+				// { foo: { bar: { pow: 123, wiz: 456 } } }
+				expect(count).to.equal(2);
+
+				const foo = gobj.get('foo');
+				expect(foo._parent).to.equal(gobj);
+
+				child.mergeDeep({ bar: { paz: 789 } });
+				// { foo: { bar: { pow: 123, wiz: 456, paz: 789 } } }
+				expect(count).to.equal(3);
+				expect(bar._parent).to.be.null;
+
+				expect(gobj.val).to.deep.equal({ foo: { bar: { pow: 123, wiz: 456, paz: 789 } } });
+			});
+
+			it('should only notify parent one time when merging multiple objects', () => {
+				const gobj = gawk({ foo: { bar: { baz: 'wiz' } } });
+				let count = 0;
+
+				gobj.watch(evt => {
+					count++;
+				});
+
+				gobj.mergeDeep({ foo: { bar: { baz: 'wow' } } });
+				expect(gobj.val).to.deep.equal({ foo: { bar: { baz: 'wow' } } });
+				expect(count).to.equal(1);
 			});
 		});
 	});

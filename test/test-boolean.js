@@ -1,7 +1,7 @@
 import { gawk, GawkBoolean } from '../src/index';
 
 describe('boolean', () => {
-	describe('gawk()', () => {
+	describe('gawking', () => {
 		it('should gawk true', () => {
 			const bool = gawk(true);
 			expect(bool).to.be.an.instanceof(GawkBoolean);

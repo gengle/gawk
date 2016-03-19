@@ -884,9 +884,21 @@ export class GawkObject extends GawkBase {
 			obj._value[key]._parent = null;
 		}
 
-		const val = obj._value[key] = gawk(value, this);
+		const oldValue = obj._value[key];
+		let newValue = gawk(value, this);
+
+		// if we had a previous gawk type and the new value is the same type,
+		// then just set the value instead of overwriting it so that existing
+		// watchers will be notified
+		if (oldValue && oldValue.prototype === newValue.prototype) {
+			oldValue.val = value;
+			newValue = oldValue;
+		} else {
+			obj._value[key] = newValue;
+		}
+
 		this.notify();
-		return val;
+		return newValue;
 	}
 
 	/**

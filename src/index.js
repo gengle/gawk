@@ -856,7 +856,7 @@ export class GawkObject extends GawkBase {
 			}
 			key = key.pop();
 		}
-		return obj._value[key];
+		return typeof key === 'undefined' ? this : obj._value[key];
 	}
 
 	/**

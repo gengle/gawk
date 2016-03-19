@@ -141,6 +141,11 @@ describe('object', () => {
 				expect(undef).to.be.undefined;
 			});
 
+			it('should return object when not specifying a key', () => {
+				const gobj = gawk({ foo: 'bar' });
+				expect(gobj.get()).to.equal(gobj);
+			});
+
 			it('should get a deeply nested object by key', () => {
 				const str = gawk({ foo: { bar: 'wiz' } }).get(['foo', 'bar']);
 				expect(str).to.be.an.instanceof(GawkString);

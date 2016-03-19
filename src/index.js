@@ -956,7 +956,10 @@ export class GawkObject extends GawkBase {
 						dest._value[key] = new GawkObject({}, dest);
 					}
 					mixer(dest._value[key], srcValue);
+				} else if (deep) {
+					dest.set(key, srcValue);
 				} else {
+					// manually set so that we don't bubble up change notifications
 					dest._value[key] = gawk(srcValue, dest);
 				}
 			}

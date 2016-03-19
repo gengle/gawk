@@ -541,6 +541,19 @@ describe('object', () => {
 			nested.set('pi', 3.14);
 		});
 
+		it('should notify child watchers if child changes', () => {
+			const gobj = gawk({ foo: { bar: 'baz' } });
+			let count = 0;
+
+			gobj.get('foo').watch(evt => {
+				count++;
+			});
+
+			gobj.mergeDeep({ foo: { bar: 'baz' + Date.now() } });
+
+			expect(count).to.equal(1);
+		});
+
 		it('should be notified when deep child changes', () => {
 			const gobj = gawk({});
 			const arr = gobj

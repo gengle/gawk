@@ -113,24 +113,6 @@ export class GawkBase {
 	}
 
 	/**
-	 * Returns the value.
-	 * @returns {*}
-	 * @access public
-	 */
-	get val() {
-		return this._value;
-	}
-
-	/**
-	 * Sets the value.
-	 * @param {*} value - The value to set.
-	 * @access public
-	 */
-	set val(value) {
-		this.notify(value);
-	}
-
-	/**
 	 * Returns the value's hash. If the value is `undefined`, then the hash is `null`.
 	 * @returns {String}
 	 * @access public

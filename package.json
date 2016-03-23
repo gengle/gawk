@@ -1,6 +1,6 @@
 {
   "name": "gawk",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Observable JavaScript object model",
   "main": "./dist/index.js",
   "author": "Chris Barber <chris@cb1inc.com> (https://github.com/cb1kenobi)",
@@ -19,7 +19,7 @@
     "build": "gulp build",
     "coverage": "gulp coverage",
     "docs": "gulp docs",
-    "prepublish": "gulp build",
+    "prepublish": "gulp build && npm shrinkwrap",
     "test": "gulp test"
   },
   "dependencies": {

@@ -1,4 +1,4 @@
-import { gawk, GawkObject, GawkString, GawkArray } from '../src/index';
+import { gawk, GawkObject, GawkString, GawkArray, GawkUndefined } from '../src/index';
 
 describe('object', () => {
 	describe('gawking', () => {
@@ -138,7 +138,7 @@ describe('object', () => {
 
 			it('should get undefined for non-existent key', () => {
 				const undef = gawk({}).get('foo');
-				expect(undef).to.be.undefined;
+				expect(undef).to.be.an.instanceOf(GawkUndefined);
 			});
 
 			it('should return object when not specifying a key', () => {
@@ -154,12 +154,12 @@ describe('object', () => {
 
 			it('should get a deeply nested non-object by key', () => {
 				const undef = gawk({ foo: 'wiz' }).get(['foo', 'bar']);
-				expect(undef).to.be.undefined;
+				expect(undef).to.be.an.instanceOf(GawkUndefined);
 			});
 
 			it('should get undefined for non-existent deeply nested key', () => {
 				const undef = gawk({ foo: { } }).get(['foo', 'bar']);
-				expect(undef).to.be.undefined;
+				expect(undef).to.be.an.instanceOf(GawkUndefined);
 			});
 		});
 

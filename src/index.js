@@ -271,11 +271,14 @@ export class GawkBase {
 export class GawkUndefined extends GawkBase {
 	/**
 	 * Constructs the null object and makes sure the value is null.
-	 * @param {Undefined} value - The value must be omitted or null.
+	 * @param {Undefined} [value] - The value must be omitted or null.
 	 * @param {GawkBase} [parent] - The parent gawk object to notify of changes.
 	 * @access public
 	 */
 	constructor(value, parent) {
+		if (typeof parent === 'undefined' && value instanceof GawkBase) {
+			parent = value;
+		}
 		super(undefined, parent);
 	}
 
@@ -308,6 +311,9 @@ export class GawkNull extends GawkBase {
 	 * @access public
 	 */
 	constructor(value, parent) {
+		if (typeof parent === 'undefined' && value instanceof GawkBase) {
+			parent = value;
+		}
 		super(null, parent);
 	}
 
@@ -833,12 +839,17 @@ export class GawkObject extends GawkBase {
 			for (let i = 0, len = key.length - 1; i < len; i++) {
 				obj = obj._value[key[i]];
 				if (!(obj instanceof GawkObject)) {
-					return undefined;
+					return new GawkUndefined(this);
 				}
 			}
 			key = key.pop();
 		}
-		return typeof key === 'undefined' ? this : obj._value[key];
+		if (typeof key === 'undefined') {
+			return this;
+		} else if (typeof obj._value[key] === 'undefined') {
+			return new GawkUndefined(this);
+		}
+		return obj._value[key];
 	}
 
 	/**

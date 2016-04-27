@@ -883,7 +883,7 @@ export class GawkObject extends GawkBase {
 		// if we had a previous gawk type and the new value is the same type,
 		// then just set the value instead of overwriting it so that existing
 		// watchers will be notified
-		if (oldValue && oldValue.prototype === newValue.prototype) {
+		if (oldValue && Object.getPrototypeOf(oldValue) === Object.getPrototypeOf(newValue)) {
 			oldValue.val = value;
 			newValue = oldValue;
 		} else {

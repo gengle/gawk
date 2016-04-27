@@ -187,6 +187,16 @@ describe('object', () => {
 
 				expect(gobj.val).to.deep.equal({ foo: { bar: 'wiz' } });
 			});
+
+			it('should override a different gawk type on set', () => {
+				const gobj = gawk({
+					foo: null
+				});
+
+				gobj.set('foo', 'bar');
+
+				expect(gobj.val).to.deep.equal({ foo: 'bar' });
+			});
 		});
 
 		describe('delete()', () => {

@@ -1,6 +1,6 @@
 {
   "name": "gawk",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Observable JavaScript object model",
   "main": "./dist/index.js",
   "author": "Chris Barber <chris@cb1inc.com> (https://github.com/cb1kenobi)",
@@ -27,8 +27,8 @@
     "source-map-support": "^0.4.0"
   },
   "devDependencies": {
-    "babel-eslint": "^6.0.2",
-    "babel-preset-nodejs-lts": "^1.2.1",
+    "babel-eslint": "^6.0.4",
+    "babel-preset-nodejs-lts": "^1.2.2",
     "chai": "^3.5.0",
     "codeclimate-test-reporter": "^0.3.1",
     "coveralls": "^2.11.9",
@@ -36,16 +36,16 @@
     "esdoc-es7-plugin": "^0.0.3",
     "gulp": "^3.9.1",
     "gulp-babel": "^6.1.2",
-    "gulp-babel-istanbul": "^1.0.0",
+    "gulp-babel-istanbul": "^1.1.0",
     "gulp-debug": "^2.1.2",
     "gulp-esdoc": "^0.2.0",
     "gulp-eslint": "^2.0.0",
     "gulp-filter": "^4.0.0",
     "gulp-inject-modules": "^0.1.1",
-    "gulp-load-plugins": "^1.2.0",
+    "gulp-load-plugins": "^1.2.2",
     "gulp-mocha": "^2.2.0",
     "gulp-plumber": "^1.1.0",
-    "gulp-sourcemaps": "^1.6.0",
+    "gulp-sourcemaps": "^2.0.0-alpha",
     "sinon": "^1.17.3",
     "sinon-chai": "^2.8.0"
   },

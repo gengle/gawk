@@ -21,7 +21,7 @@ import 'source-map-support/register';
  * @param {GawkBase} [parent] - The parent gawk object to notify of changes.
  * @returns {GawkBase}
  */
-export function gawk(value, parent) {
+export default function gawk(value, parent) {
 	let cls;
 
 	if (typeof value === 'undefined') {
@@ -53,6 +53,8 @@ export function gawk(value, parent) {
 
 	return new cls(value, parent);
 }
+
+export { gawk as gawk };
 
 /**
  * Event class.
@@ -256,7 +258,7 @@ export class GawkBase {
 
 		return () => {
 			// remove all matches
-			for (let i = 0, l = this._watchers.length; i < l; i++) {
+			for (let i = 0; i < this._watchers.length; i++) {
 				if (this._watchers[i] === fn) {
 					this._watchers.splice(i--, 1);
 				}

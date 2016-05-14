@@ -915,6 +915,15 @@ export class GawkObject extends GawkBase {
 	}
 
 	/**
+	 * Checks if a key exists.
+	 * @returns {Boolean}
+	 * @access public
+	 */
+	has(key) {
+		return this._value.hasOwnProperty(key);
+	}
+
+	/**
 	 * Removes all key/value pairs from the object.
 	 * @returns {GawkObject}
 	 * @access public

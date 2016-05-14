@@ -218,6 +218,14 @@ describe('object', () => {
 			});
 		});
 
+		describe('has()', () => {
+			it('should tell if it has a key', () => {
+				const gobj = gawk({ foo: 'bar' });
+				expect(gobj.has('foo')).to.be.true;
+				expect(gobj.has('baz')).to.be.false;
+			});
+		});
+
 		describe('clear()', () => {
 			it('should wipe all key/values', () => {
 				const gobj = gawk({

@@ -332,8 +332,8 @@ describe('object', () => {
 					count++;
 				});
 
-				gobj.merge({ baz: 'wiz' }, gawk({ pi: 3.14 }), { num: 123 }, gawk({ arr: ['a', 'b'] }));
-				expect(gobj.val).to.deep.equal({ foo: 'bar', baz: 'wiz', pi: 3.14, num: 123, arr: ['a', 'b'] });
+				gobj.merge({ baz: 'wiz' }, gawk({ pi: 3.14 })); //, { num: 123 }, gawk({ arr: ['a', 'b'] }));
+				expect(gobj.val).to.deep.equal({ foo: 'bar', baz: 'wiz', pi: 3.14 }); //, num: 123, arr: ['a', 'b'] });
 				expect(count).to.equal(1);
 			});
 		});
@@ -570,6 +570,69 @@ describe('object', () => {
 			gobj.mergeDeep({ foo: { bar: 'baz' + Date.now() } });
 
 			expect(count).to.equal(1);
+		});
+
+		it('should only notify once after deep merge', () => {
+			const gobj = new GawkObject;
+			let counter = 0;
+
+			gobj.watch(evt => {
+				counter++;
+			});
+
+			gobj.mergeDeep({
+				foo: {
+					a: 'b',
+					c: 123,
+					d: {
+						e: 'f',
+						g: 'h'
+					}
+				}
+			});
+
+			expect(gobj.val).to.deep.equal({
+				foo: {
+					a: 'b',
+					c: 123,
+					d: {
+						e: 'f',
+						g: 'h'
+					}
+				}
+			});
+
+			gobj.mergeDeep({
+				bar: {
+					i: 'j',
+					k: 456,
+					l: {
+						m: 'n',
+						o: 'p'
+					}
+				}
+			});
+
+			expect(gobj.val).to.deep.equal({
+				foo: {
+					a: 'b',
+					c: 123,
+					d: {
+						e: 'f',
+						g: 'h'
+					}
+				},
+				bar: {
+					i: 'j',
+					k: 456,
+					l: {
+						m: 'n',
+						o: 'p'
+					}
+				}
+			});
+
+			expect(counter).to.equal(2);
 		});
 
 		it('should be notified when deep child changes', () => {

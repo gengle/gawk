@@ -235,7 +235,7 @@ export class GawkBase {
 			type: 'change'
 		});
 
-		for (let w of this._watchers) {
+		for (const w of this._watchers) {
 			w(evt);
 		}
 
@@ -592,7 +592,7 @@ export class GawkArray extends GawkBase {
 	 * @access private
 	 */
 	detachChildren() {
-		for (let elem of this._value) {
+		for (const elem of this._value) {
 			elem._parent = null;
 		}
 	}
@@ -765,7 +765,7 @@ export class GawkObject extends GawkBase {
 			// save ourselves from having to loop again
 			this._hash = '';
 
-			for (let key of keys) {
+			for (const key of keys) {
 				const v = obj[key] = gawk(isGawked ? value._value[key].val : value[key], this);
 				this._hash = hash(this._hash + v._hash);
 			}
@@ -788,7 +788,7 @@ export class GawkObject extends GawkBase {
 	 * @access private
 	 */
 	detachChildren() {
-		for (let key of Object.keys(this._value)) {
+		for (const key of Object.keys(this._value)) {
 			this._value[key]._parent = null;
 		}
 	}
@@ -800,7 +800,7 @@ export class GawkObject extends GawkBase {
 	 */
 	get val() {
 		const obj = {};
-		for (let key of Object.keys(this._value)) {
+		for (const key of Object.keys(this._value)) {
 			obj[key] = this._value[key].val;
 		}
 		return obj;
@@ -822,7 +822,7 @@ export class GawkObject extends GawkBase {
 		}
 
 		const newValue = {};
-		for (let key of Object.keys(isGawked ? value._value : value)) {
+		for (const key of Object.keys(isGawked ? value._value : value)) {
 			newValue[key] = gawk(isGawked ? value._value[key].val : value[key], this);
 		}
 		this.notify(newValue);
@@ -957,39 +957,45 @@ export class GawkObject extends GawkBase {
 			throw new TypeError('Value must be an object or GawkObject');
 		}
 
+		// we need to detach the parent and all watchers so that they will be
+		// notified after everything has been merged
+		const parent = this._parent;
+		const watchers = this._watchers;
+		this._parent = null;
+		this._watchers = [];
+
 		let changed = false;
 
 		/**
 		 * Mix an object or GawkObject into a GawkObject.
-		 * @param {GawkObject} dest
+		 * @param {GawkObject} gobj
 		 * @param {Object} src
 		 */
-		const mixer = (dest, src) => {
-			for (let key of Object.keys(src)) {
+		const mixer = (gobj, src) => {
+			for (const key of Object.keys(src)) {
 				const srcValue = src[key] instanceof GawkBase ? src[key]._value : src[key];
-				if (deep && ((typeof srcValue === 'object' && srcValue !== null && !Array.isArray(srcValue) && !(srcValue instanceof GawkBase)) || srcValue instanceof GawkObject)) {
-					if (!(dest._value[key] instanceof GawkObject)) {
-						dest._value[key] = new GawkObject({}, dest);
-					}
-					mixer(dest._value[key], srcValue);
-				} else if (deep) {
-					dest.set(key, srcValue);
-				} else {
-					// manually set so that we don't bubble up change notifications
-					dest._value[key] = gawk(srcValue, dest);
-				}
-			}
+				const hashBefore = gobj._hash;
 
-			// manually recompute the hash of this dest object now that we're
-			// finished adding key/values to it
-			const newHash = dest.hasher(dest._value);
-			if (newHash !== dest._hash) {
-				changed = true;
-				dest._hash = newHash;
+				if (deep && (typeof srcValue === 'object' && srcValue !== null && !Array.isArray(srcValue) && (!(srcValue instanceof GawkBase) || srcValue instanceof GawkObject))) {
+					let dest = gobj._value[key];
+					if (!(dest instanceof GawkObject)) {
+						if (dest instanceof GawkBase) {
+							dest._parent = null;
+						}
+						dest = gobj._value[key] = new GawkObject({}, gobj);
+					}
+					mixer(dest, srcValue);
+				} else {
+					gobj.set(key, srcValue);
+				}
+
+				if (!changed && hashBefore !== gobj._hash) {
+					changed = true;
+				}
 			}
 		};
 
-		for (let obj of objs) {
+		for (const obj of objs) {
 			mixer(this, obj instanceof GawkObject ? obj._value : obj);
 		}
 
@@ -1003,7 +1009,12 @@ export class GawkObject extends GawkBase {
 			this._hash = 'gawk rocks';
 		}
 
+		// restore the parent and the watchers
+		this._parent = parent;
+		this._watchers = watchers;
+
 		this.notify();
+
 		return this;
 	}
 

@@ -19,7 +19,7 @@
     "build": "gulp build",
     "coverage": "gulp coverage",
     "docs": "gulp docs",
-    "prepublish": "gulp build && in-publish && npm shrinkwrap",
+    "prepublish": "gulp build && in-publish && npm shrinkwrap || not-in-publish",
     "test": "gulp test"
   },
   "dependencies": {

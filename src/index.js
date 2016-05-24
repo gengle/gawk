@@ -1,5 +1,8 @@
 import hash from 'object-hash';
-import 'source-map-support/register';
+
+if (!Error.prepareStackTrace) {
+	require('source-map-support/register');
+}
 
 /*
  * Golden Rules:
@@ -629,9 +632,9 @@ export class GawkArray extends GawkBase {
 	}
 
 	/**
-	 * Returns the gawked value at the specified index.
-	 * @param {Number} index - The index to return.
-	 * @param {*} value - The value to
+	 * Sets the value at the specified index.
+	 * @param {Number} index - The index to insert the value
+	 * @param {*} value - The value to set.
 	 * @returns {GawkBase}
 	 * @access public
 	 */

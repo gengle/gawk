@@ -56,6 +56,12 @@ describe('boolean', () => {
 			const bool = new GawkBoolean(gawk(true));
 			expect(bool.val).to.be.true;
 		});
+
+		it('should fail if parent is not a gawk object', () => {
+			expect(() => {
+				new GawkBoolean(true, 'foo');
+			}).to.throw(TypeError, 'Parent must be a gawk class');
+		});
 	});
 
 	describe('set casting', () => {

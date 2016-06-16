@@ -21,11 +21,15 @@ if (!Error.prepareStackTrace) {
 /**
  * Creates a gawk object that wraps the input value.
  * @param {*} value - A value to wrap.
- * @param {GawkBase} [parent] - The parent gawk object to notify of changes.
+ * @param {GawkBase|Array<GawkBase>} [parent] - The parent gawk object to notify of changes.
  * @returns {GawkBase}
  */
 export default function gawk(value, parent) {
 	let cls;
+
+	if (parent && !(parent instanceof GawkBase)) {
+		throw new TypeError('Expected parent to be a gawk data type');
+	}
 
 	if (typeof value === 'undefined') {
 		value = undefined;
@@ -46,7 +50,9 @@ export default function gawk(value, parent) {
 		cls = GawkFunction;
 	} else if (typeof value === 'object') {
 		if (value instanceof GawkBase) {
-			value._parent = parent;
+			if (value._parents.indexOf(parent) === -1) {
+				value._parents.push(parent);
+			}
 			return value;
 		}
 		cls = GawkObject;
@@ -77,12 +83,22 @@ export class GawkBase {
 	/**
 	 * Constructs the base object.
 	 * @param {*} value - The value being wrapped.
-	 * @param {GawkBase} [parent] - The parent gawk object to notify of changes.
+	 * @param {GawkBase|Array<GawkBase>} [parent] - The parent gawk object to
+	 * notify of changes.
 	 * @access public
 	 */
 	constructor(value, parent = null) {
-		if (parent && !(parent instanceof GawkBase)) {
-			throw new TypeError('Parent must be a gawk class');
+		const parents = [];
+		if (parent) {
+			const pp = Array.isArray(parent) ? parent : [ parent ];
+			for (const p of pp) {
+				if (!(p instanceof GawkBase)) {
+					throw new TypeError('Parent must be a gawk class');
+				}
+				if (parents.indexOf(p) === -1) {
+					parents.push(p);
+				}
+			}
 		}
 
 		Object.defineProperties(this, {
@@ -106,7 +122,7 @@ export class GawkBase {
 			 * @type {GawkBase}
 			 * @access private
 			 */
-			_parent: { value: parent, writable: true },
+			_parents: { value: parents, writable: true },
 
 			/**
 			 * The list of all watchers to notify of changes.
@@ -193,6 +209,20 @@ export class GawkBase {
 	}
 
 	/**
+	 * Removes the specified parent, if exists. This is intended for internal
+	 * use only.
+	 * @param {GawkBase} parent - The parent reference to remove.
+	 * @access private
+	 */
+	removeParent(parent) {
+		for (let i = 0; i < this._parents.length; i++) {
+			if (this._parents[i] === parent) {
+				this._parents.splice(i--, 1);
+			}
+		}
+	}
+
+	/**
 	 * Detaches any child gawk objects. This is so containers such as `GawkArray`
 	 * and `GawkObject` can disassociate themselves from their children.
 	 * @access private
@@ -242,7 +272,9 @@ export class GawkBase {
 			w(evt);
 		}
 
-		this._parent && this._parent.notify(evt);
+		for (const p of this._parents) {
+			p.notify(evt);
+		}
 	}
 
 	/**
@@ -277,11 +309,11 @@ export class GawkUndefined extends GawkBase {
 	/**
 	 * Constructs the null object and makes sure the value is null.
 	 * @param {Undefined} [value] - The value must be omitted or null.
-	 * @param {GawkBase} [parent] - The parent gawk object to notify of changes.
+	 * @param {GawkBase|Array<GawkBase>} [parent] - The parent gawk object to notify of changes.
 	 * @access public
 	 */
 	constructor(value, parent) {
-		if (typeof parent === 'undefined' && value instanceof GawkBase) {
+		if (typeof parent === 'undefined' && (value instanceof GawkBase || (Array.isArray(value) && value.every(v => v instanceof GawkBase)))) {
 			parent = value;
 		}
 		super(undefined, parent);
@@ -312,11 +344,11 @@ export class GawkNull extends GawkBase {
 	/**
 	 * Constructs the null object and makes sure the value is null.
 	 * @param {null} value - The value must be omitted or null.
-	 * @param {GawkBase} [parent] - The parent gawk object to notify of changes.
+	 * @param {GawkBase|Array<GawkBase>} [parent] - The parent gawk object to notify of changes.
 	 * @access public
 	 */
 	constructor(value, parent) {
-		if (typeof parent === 'undefined' && value instanceof GawkBase) {
+		if (typeof parent === 'undefined' && (value instanceof GawkBase || (Array.isArray(value) && value.every(v => v instanceof GawkBase)))) {
 			parent = value;
 		}
 		super(null, parent);
@@ -347,7 +379,7 @@ export class GawkNumber extends GawkBase {
 	/**
 	 * Constructs the number object and makes sure the value is a number.
 	 * @param {Number} value - The value to make a bool and set.
-	 * @param {GawkBase} [parent] - The parent gawk object to notify of changes.
+	 * @param {GawkBase|Array<GawkBase>} [parent] - The parent gawk object to notify of changes.
 	 * @access public
 	 */
 	constructor(value = 0, parent) {
@@ -380,7 +412,7 @@ export class GawkBoolean extends GawkBase {
 	/**
 	 * Constructs the boolean object and makes sure the value is a bool.
 	 * @param {Boolean} value - The value to make a bool and set.
-	 * @param {GawkBase} [parent] - The parent gawk object to notify of changes.
+	 * @param {GawkBase|Array<GawkBase>} [parent] - The parent gawk object to notify of changes.
 	 * @access public
 	 */
 	constructor(value = false, parent) {
@@ -413,7 +445,7 @@ export class GawkString extends GawkBase {
 	/**
 	 * Constructs the string object and makes sure the value is a string.
 	 * @param {String} value - The value to make a string and set.
-	 * @param {GawkBase} [parent] - The parent gawk object to notify of changes.
+	 * @param {GawkBase|Array<GawkBase>} [parent] - The parent gawk object to notify of changes.
 	 * @access public
 	 */
 	constructor(value, parent) {
@@ -452,7 +484,7 @@ export class GawkFunction extends GawkBase {
 	/**
 	 * Constructs the function object.
 	 * @param {Function} value - The function to set.
-	 * @param {GawkBase} [parent] - The parent gawk object to notify of changes.
+	 * @param {GawkBase|Array<GawkBase>} [parent] - The parent gawk object to notify of changes.
 	 * @access public
 	 */
 	constructor(value, parent) {
@@ -511,7 +543,7 @@ export class GawkDate extends GawkBase {
 	/**
 	 * Constructs the date object by duplicating the input value.
 	 * @param {Date} value - The date to set.
-	 * @param {GawkBase} [parent] - The parent gawk object to notify of changes.
+	 * @param {GawkBase|Array<GawkBase>} [parent] - The parent gawk object to notify of changes.
 	 * @access public
 	 */
 	constructor(value, parent) {
@@ -553,7 +585,7 @@ export class GawkArray extends GawkBase {
 	/**
 	 * Constructs the array object by duplicating the input value.
 	 * @param {Array} value - The value to set.
-	 * @param {GawkBase} [parent] - The parent gawk object to notify of changes.
+	 * @param {GawkBase|Array<GawkBase>} [parent] - The parent gawk object to notify of changes.
 	 * @access public
 	 */
 	constructor(value = [], parent) {
@@ -596,7 +628,7 @@ export class GawkArray extends GawkBase {
 	 */
 	detachChildren() {
 		for (const elem of this._value) {
-			elem._parent = null;
+			elem.removeParent(this);
 		}
 	}
 
@@ -640,7 +672,7 @@ export class GawkArray extends GawkBase {
 	 */
 	set(index, value) {
 		if (this._value[index] instanceof GawkBase) {
-			this._value[index]._parent = null;
+			this._value[index].removeParent(this);
 		}
 		this._value[index] = gawk(value);
 		this.notify();
@@ -665,7 +697,7 @@ export class GawkArray extends GawkBase {
 	delete(index) {
 		const value = this._value.splice(index, 1)[0];
 		if (value instanceof GawkBase) {
-			value._parent = null;
+			value.removeParent(this);
 		}
 		this.notify();
 		return value;
@@ -745,7 +777,7 @@ export class GawkObject extends GawkBase {
 	/**
 	 * Constructs the object by duplicating the input value.
 	 * @param {Object} value - The value to set.
-	 * @param {GawkBase} [parent] - The parent gawk object to notify of changes.
+	 * @param {GawkBase|Array<GawkBase>} [parent] - The parent gawk object to notify of changes.
 	 * @access public
 	 */
 	constructor(value = {}, parent) {
@@ -792,7 +824,7 @@ export class GawkObject extends GawkBase {
 	 */
 	detachChildren() {
 		for (const key of Object.keys(this._value)) {
-			this._value[key]._parent = null;
+			this._value[key].removeParent(this);
 		}
 	}
 
@@ -879,7 +911,7 @@ export class GawkObject extends GawkBase {
 		}
 
 		if (obj._value[key] instanceof GawkBase) {
-			obj._value[key]._parent = null;
+			obj._value[key].removeParent(this);
 		}
 
 		const oldValue = obj._value[key];
@@ -909,7 +941,7 @@ export class GawkObject extends GawkBase {
 		if (this._value.hasOwnProperty(key)) {
 			const value = this._value[key];
 			if (value instanceof GawkBase) {
-				value._parent = null;
+				value.removeParent(this);
 			}
 			delete this._value[key];
 			this.notify();
@@ -962,9 +994,9 @@ export class GawkObject extends GawkBase {
 
 		// we need to detach the parent and all watchers so that they will be
 		// notified after everything has been merged
-		const parent = this._parent;
+		const parents = this._parents;
 		const watchers = this._watchers;
-		this._parent = null;
+		this._parents = [];
 		this._watchers = [];
 
 		let changed = false;
@@ -983,7 +1015,7 @@ export class GawkObject extends GawkBase {
 					let dest = gobj._value[key];
 					if (!(dest instanceof GawkObject)) {
 						if (dest instanceof GawkBase) {
-							dest._parent = null;
+							dest.removeParent(this);
 						}
 						dest = gobj._value[key] = new GawkObject({}, gobj);
 					}
@@ -1013,7 +1045,7 @@ export class GawkObject extends GawkBase {
 		}
 
 		// restore the parent and the watchers
-		this._parent = parent;
+		this._parents = parents;
 		this._watchers = watchers;
 
 		this.notify();

@@ -50,6 +50,12 @@ describe('string', () => {
 			const str = new GawkString(gawk('foo'));
 			expect(str.val).to.equal('foo');
 		});
+
+		it('should fail if parent is not a gawk object', () => {
+			expect(() => {
+				new GawkString('foo', 'bar');
+			}).to.throw(TypeError, 'Parent must be a gawk class');
+		});
 	});
 
 	describe('set casting', () => {

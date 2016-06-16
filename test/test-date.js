@@ -49,6 +49,12 @@ describe('date', () => {
 			const gobj = new GawkDate;
 			expect(gobj.val).to.be.a.date;
 		});
+
+		it('should fail if parent is not a gawk object', () => {
+			expect(() => {
+				new GawkDate(new Date, 'foo');
+			}).to.throw(TypeError, 'Parent must be a gawk class');
+		});
 	});
 
 	describe('set casting', () => {

@@ -44,6 +44,12 @@ describe('null', () => {
 			const nil = new GawkNull(gawk(null));
 			expect(nil.val).to.be.null;
 		});
+
+		it('should fail if parent is not a gawk object', () => {
+			expect(() => {
+				new GawkNull(null, 'foo');
+			}).to.throw(TypeError, 'Parent must be a gawk class');
+		});
 	});
 
 	describe('set casting', () => {

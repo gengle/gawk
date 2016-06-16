@@ -90,6 +90,12 @@ describe('number', () => {
 			const num = new GawkNumber(gawk(123));
 			expect(num.val).to.equal(123);
 		});
+
+		it('should fail if parent is not a gawk object', () => {
+			expect(() => {
+				new GawkNumber(123, 'foo');
+			}).to.throw(TypeError, 'Parent must be a gawk class');
+		});
 	});
 
 	describe('set casting', () => {

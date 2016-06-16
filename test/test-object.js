@@ -78,6 +78,12 @@ describe('object', () => {
 			const gobj = new GawkObject(gawk(obj));
 			expect(gobj.toJS()).to.deep.equal(obj);
 		});
+
+		it('should fail if parent is not a gawk object', () => {
+			expect(() => {
+				new GawkObject({}, 'foo');
+			}).to.throw(TypeError, 'Parent must be a gawk class');
+		});
 	});
 
 	describe('set casting', () => {
@@ -307,19 +313,25 @@ describe('object', () => {
 				gobj.set('foo', child);
 				// { foo: {} }
 				expect(count).to.equal(1);
+				expect(child._parents).to.have.lengthOf(1);
+				expect(child._parents[0]).to.equal(gobj);
 
 				const bar = gawk({ bar: 'wiz' });
 				child.merge(bar);
 				// { foo: { bar: 'wiz' } }
 				expect(count).to.equal(2);
+				expect(bar._parents).to.have.lengthOf(0);
 
 				const foo = gobj.get('foo');
-				expect(foo._parent).to.equal(gobj);
+				expect(foo._parents).to.have.lengthOf(1);
+				expect(foo._parents[0]).to.equal(gobj);
 
 				child.merge({ bar: 'wow' });
 				// { foo: { bar: 'wow' } }
 				expect(count).to.equal(3);
-				expect(bar._parent).to.be.null;
+				expect(bar._parents).to.have.lengthOf(0);
+				expect(child._parents).to.have.lengthOf(1);
+				expect(child._parents[0]).to.equal(gobj);
 
 				expect(gobj.val).to.deep.equal({ foo: { bar: 'wow' } });
 			});
@@ -409,12 +421,13 @@ describe('object', () => {
 				expect(count).to.equal(2);
 
 				const foo = gobj.get('foo');
-				expect(foo._parent).to.equal(gobj);
+				expect(foo._parents).to.have.lengthOf(1);
+				expect(foo._parents[0]).to.equal(gobj);
 
 				child.mergeDeep({ bar: { paz: 789 } });
 				// { foo: { bar: { pow: 123, wiz: 456, paz: 789 } } }
 				expect(count).to.equal(3);
-				expect(bar._parent).to.be.null;
+				expect(bar._parents).to.have.lengthOf(0);
 
 				expect(gobj.val).to.deep.equal({ foo: { bar: { pow: 123, wiz: 456, paz: 789 } } });
 			});
@@ -650,6 +663,31 @@ describe('object', () => {
 			arr.push('a');
 			arr.push('b');
 			expect(count).to.equal(2);
+		});
+
+		it('should notify multiple parents', () => {
+			const gobjs = [
+				new GawkObject,
+				new GawkObject,
+				new GawkObject
+			];
+			const child = gawk({});
+			const arr = child.set('bar', []);
+			let count = 0;
+
+			for (const gobj of gobjs) {
+				gobj.set('foo', child);
+			}
+
+			for (const gobj of gobjs) {
+				gobj.watch(evt => {
+					count++;
+				});
+			}
+
+			arr.push('a');
+			arr.push('b');
+			expect(count).to.equal(6);
 		});
 	});
 });

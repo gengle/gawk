@@ -69,6 +69,12 @@ describe('array', () => {
 			const garr = new GawkArray(gawk(arr));
 			expect(garr.toJS()).to.deep.equal(arr);
 		});
+
+		it('should fail if parent is not a gawk object', () => {
+			expect(() => {
+				new GawkArray([], 'foo');
+			}).to.throw(TypeError, 'Parent must be a gawk class');
+		});
 	});
 
 	describe('set casting', () => {
@@ -386,9 +392,11 @@ describe('array', () => {
 			arr1.push(arr2);
 			arr2.push(arr3);
 
-			expect(arr1._parent).to.be.null;
-			expect(arr2._parent).to.equal(arr1);
-			expect(arr3._parent).to.equal(arr2);
+			expect(arr1._parents).to.have.lengthOf(0);
+			expect(arr2._parents).to.have.lengthOf(1);
+			expect(arr2._parents[0]).to.equal(arr1);
+			expect(arr3._parents).to.have.lengthOf(1);
+			expect(arr3._parents[0]).to.equal(arr2);
 
 			arr1.watch(evt => {
 				count1++;

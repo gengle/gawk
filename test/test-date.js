@@ -114,9 +114,9 @@ describe('date', () => {
 			const now = new Date;
 
 			date.watch(evt => {
-				expect(evt.target).to.equal(date);
+				expect(evt.targets).to.deep.equal([ date ]);
 
-				const val = evt.target.val;
+				const val = evt.targets[0].val;
 				expect(val).to.be.a.date;
 				expect(val).to.equal(now);
 			});

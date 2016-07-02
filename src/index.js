@@ -69,9 +69,9 @@ export { gawk as gawk };
  * Event class.
  */
 export class GawkEvent {
-	constructor({ source, target, type }) {
+	constructor({ source, targets, type }) {
 		this.source = source;
-		this.target = target;
+		this.targets = targets;
 		this.type = type;
 	}
 }
@@ -129,7 +129,23 @@ export class GawkBase {
 			 * @type {Array}
 			 * @access private
 			 */
-			_watchers: { value: [], writable: true }
+			_watchers: { value: [], writable: true },
+
+			/**
+			 * An internal flag that if true when `resume()` is called, it sends
+			 * out notifications if anything changed while paused.
+			 * @type {Boolean}
+			 * @access private
+			 */
+			_paused: { value: 0, writable: true },
+
+			/**
+			 * When set to a GawkEvent, then we are paused until `resume()` is
+			 * been called.
+			 * @type {GawkEvent|null}
+			 * @access private
+			 */
+			_pausedEvent: { value: null, writable: true }
 		});
 	}
 
@@ -232,6 +248,36 @@ export class GawkBase {
 	}
 
 	/**
+	 * Sets the paused flag which pauses change notifications from being sent to
+	 * watchers and parents.
+	 * @access public
+	 */
+	pause() {
+		this._paused = true;
+	}
+
+	/**
+	 * Sets the paused flag which pauses change notifications from being sent to
+	 * watchers and parents.
+	 * @access public
+	 */
+	resume() {
+		const evt = this._paused && this._pausedEvent;
+		this._paused = false;
+		if (evt) {
+			// send notifications
+			for (const w of this._watchers) {
+				w(evt);
+			}
+
+			for (const p of this._parents) {
+				p.notify(evt);
+			}
+		}
+		this._pausedEvent = null;
+	}
+
+	/**
 	 * Notifies watchers and the parent gawk object when this object changes.
 	 * @param {*|GawkEvent} [newValue] - When value is a GawkEvent, that means
 	 * a child gawk object was changed. Otherwise, if a value is present, then
@@ -262,18 +308,32 @@ export class GawkBase {
 			this._value = newValue;
 		}
 
+		const targets = arguments.length && newValue instanceof GawkEvent ? newValue.targets : [ this ];
+
+		if (this._paused && this._pausedEvent) {
+			for (const target of targets) {
+				if (this._pausedEvent.targets.indexOf(target) === -1) {
+					this._pausedEvent.targets.push(target);
+				}
+			}
+			return;
+		}
+
 		const evt = new GawkEvent({
 			source: this,
-			target: arguments.length && newValue instanceof GawkEvent ? newValue.target : this,
+			targets: targets,
 			type: 'change'
 		});
 
-		for (const w of this._watchers) {
-			w(evt);
-		}
-
-		for (const p of this._parents) {
-			p.notify(evt);
+		if (!this._paused) {
+			for (const w of this._watchers) {
+				w(evt);
+			}
+			for (const p of this._parents) {
+				p.notify(evt);
+			}
+		} else if (!this._pausedEvent) {
+			this._pausedEvent = evt;
 		}
 	}
 
@@ -994,10 +1054,7 @@ export class GawkObject extends GawkBase {
 
 		// we need to detach the parent and all watchers so that they will be
 		// notified after everything has been merged
-		const parents = this._parents;
-		const watchers = this._watchers;
-		this._parents = [];
-		this._watchers = [];
+		this.pause();
 
 		let changed = false;
 
@@ -1044,11 +1101,8 @@ export class GawkObject extends GawkBase {
 			this._hash = 'gawk rocks';
 		}
 
-		// restore the parent and the watchers
-		this._parents = parents;
-		this._watchers = watchers;
-
 		this.notify();
+		this.resume();
 
 		return this;
 	}

@@ -452,9 +452,9 @@ describe('object', () => {
 			const gobj = gawk({ foo: 'bar' });
 			gobj.watch(evt => {
 				expect(evt.source).to.equal(gobj);
-				expect(evt.target).to.equal(gobj);
+				expect(evt.targets).to.deep.equal([ gobj ]);
 
-				const obj = evt.target.val;
+				const obj = evt.targets[0].val;
 				expect(obj).to.deep.equal({ bar: 'wiz' });
 			});
 			gobj.val = { bar: 'wiz' };
@@ -464,9 +464,9 @@ describe('object', () => {
 			const gobj = gawk({ foo: 'bar' });
 			gobj.watch(evt => {
 				expect(evt.source).to.equal(gobj);
-				expect(evt.target).to.equal(gobj);
+				expect(evt.targets).to.deep.equal([ gobj ]);
 
-				const obj = evt.target.val;
+				const obj = evt.targets[0].val;
 				expect(obj).to.deep.equal({ foo: 'bar', pi: 3.14 });
 			});
 			gobj.set('pi', 3.14);
@@ -476,9 +476,9 @@ describe('object', () => {
 			const gobj = gawk({ foo: 'bar' });
 			gobj.watch(evt => {
 				expect(evt.source).to.equal(gobj);
-				expect(evt.target).to.equal(gobj);
+				expect(evt.targets).to.deep.equal([ gobj ]);
 
-				const obj = evt.target.val;
+				const obj = evt.targets[0].val;
 				expect(obj).to.deep.equal({ foo: 'wiz' });
 			});
 			gobj.set('foo', 'wiz');
@@ -488,9 +488,9 @@ describe('object', () => {
 			const gobj = gawk({ foo: 'bar', pi: 3.14 });
 			gobj.watch(evt => {
 				expect(evt.source).to.equal(gobj);
-				expect(evt.target).to.equal(gobj);
+				expect(evt.targets).to.deep.equal([ gobj ]);
 
-				const obj = evt.target.val;
+				const obj = evt.targets[0].val;
 				expect(obj).to.deep.equal({ foo: 'bar' });
 			});
 			gobj.delete('pi');
@@ -508,9 +508,9 @@ describe('object', () => {
 			const gobj = gawk({ foo: 'bar', pi: 3.14 });
 			gobj.watch(evt => {
 				expect(evt.source).to.equal(gobj);
-				expect(evt.target).to.equal(gobj);
+				expect(evt.targets).to.deep.equal([ gobj ]);
 
-				const obj = evt.target.val;
+				const obj = evt.targets[0].val;
 				expect(obj).to.be.an.object;
 				expect(obj).to.deep.equal({});
 			});
@@ -557,7 +557,7 @@ describe('object', () => {
 
 			gobj.watch(evt => {
 				expect(evt.source).to.equal(gobj);
-				expect(evt.target).to.equal(nested);
+				expect(evt.targets).to.deep.equal([ nested ]);
 
 				const obj = evt.source.val;
 				expect(obj).to.be.an.object;
@@ -688,6 +688,34 @@ describe('object', () => {
 			arr.push('a');
 			arr.push('b');
 			expect(count).to.equal(6);
+		});
+
+		it('should pause and resume notifications', () => {
+			const gobj = gawk({ foo: 'bar' });
+			let counter = 0;
+
+			gobj.watch(evt => {
+				counter++;
+			});
+
+			gobj.set('pi', 3.14);
+			expect(counter).to.equal(1);
+
+			const gobj2 = new GawkObject({ wiz: 123 });
+
+			gobj.pause();
+			gobj.set('baz', gobj2);
+			expect(counter).to.equal(1);
+			gobj.resume();
+			expect(counter).to.equal(2);
+
+			gobj.pause();
+			gobj.set('color', 'red');
+			expect(counter).to.equal(2);
+			gobj2.set('lorum', 'ipsum');
+			expect(counter).to.equal(2);
+			gobj.resume();
+			expect(counter).to.equal(3);
 		});
 	});
 });

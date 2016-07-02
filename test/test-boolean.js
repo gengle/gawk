@@ -127,9 +127,9 @@ describe('boolean', () => {
 			const bool = gawk(true);
 
 			bool.watch(evt => {
-				expect(evt.target).to.equal(bool);
+				expect(evt.targets[0]).to.equal(bool);
 
-				const val = evt.target.val;
+				const val = evt.targets[0].val;
 				expect(val).to.be.a.boolean;
 				expect(val).to.equal(false);
 			});

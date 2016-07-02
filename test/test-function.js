@@ -146,9 +146,9 @@ describe('function', () => {
 			const fn = gawk(function () {});
 
 			fn.watch(evt => {
-				expect(evt.target).to.equal(fn);
+				expect(evt.targets[0]).to.equal(fn);
 
-				const val = evt.target.val;
+				const val = evt.targets[0].val;
 				expect(val).to.be.a.function;
 				expect(val).to.equal(foo);
 			});

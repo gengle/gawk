@@ -107,9 +107,9 @@ describe('string', () => {
 			const str = gawk('foo');
 
 			str.watch(evt => {
-				expect(evt.target).to.equal(str);
+				expect(evt.targets).to.deep.equal([ str ]);
 
-				const val = evt.target.val;
+				const val = evt.targets[0].val;
 				expect(val).to.be.a.string;
 				expect(val).to.equal('bar');
 			});

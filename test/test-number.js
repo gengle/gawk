@@ -153,9 +153,9 @@ describe('number', () => {
 			const num = gawk(123);
 
 			num.watch(evt => {
-				expect(evt.target).to.equal(num);
+				expect(evt.targets[0]).to.equal(num);
 
-				const val = evt.target.val;
+				const val = evt.targets[0].val;
 				expect(val).to.be.a.number;
 				expect(val).to.equal(456);
 			});

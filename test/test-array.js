@@ -320,9 +320,9 @@ describe('array', () => {
 
 			garr.watch(evt => {
 				expect(evt.source).to.equal(garr);
-				expect(evt.target).to.equal(garr);
+				expect(evt.targets).to.deep.equal([ garr ]);
 
-				const val = evt.target.val;
+				const val = evt.targets[0].val;
 				expect(val).to.be.an.array;
 				expect(val).to.deep.equal(arr);
 			});
@@ -380,7 +380,7 @@ describe('array', () => {
 			expect(count).to.equal(4);
 		});
 
-		it('should be notified when deeply nexted children change', () => {
+		it('should be notified when deeply nested children change', () => {
 			let count1 = 0;
 			let count2 = 0;
 			let count3 = 0;
@@ -401,19 +401,19 @@ describe('array', () => {
 			arr1.watch(evt => {
 				count1++;
 				expect(evt.source).to.equal(arr1);
-				expect(evt.target).to.equal(arr3);
+				expect(evt.targets).to.deep.equal([ arr3 ]);
 			});
 
 			arr2.watch(evt => {
 				count2++;
 				expect(evt.source).to.equal(arr2);
-				expect(evt.target).to.equal(arr3);
+				expect(evt.targets).to.deep.equal([ arr3 ]);
 			});
 
 			arr3.watch(evt => {
 				count3++;
 				expect(evt.source).to.equal(arr3);
-				expect(evt.target).to.equal(arr3);
+				expect(evt.targets).to.deep.equal([ arr3 ]);
 			});
 
 			arr3.push('foo');

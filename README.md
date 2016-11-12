@@ -9,17 +9,11 @@
 [![Dev Deps][david-dev-image]][david-dev-url]
 
 Gawk is a observable model that wraps JavaScript data types. Once a JavaScript
-value is wrapped, it allows you to listen for changes. You can observe deeply
-nested objects too.
+value is gawked, you can listen for changes including deeply nested changes.
 
-Gawk supports the common built-in data types such as string, boolean, number,
-array, object, function, null, and undefined. Anything that you can represent
-in a JSON object, you can gawk.
+Only arrays and objects can be gawked. All other types are passed through.
 
-Gawked arrays, objects, and functions have unique methods for common tasks. For
-example, `GawkArray` instances have `push()` and `pop()` methods.
-
-> Note: gawk requires Node.js 4 or newer.
+> Note: gawk uses ES2015 proxies and thus requires Node.js 6 or newer.
 
 ## Installation
 
@@ -28,22 +22,20 @@ example, `GawkArray` instances have `push()` and `pop()` methods.
 ## Examples
 
 ```javascript
-import { gawk } from 'gawk';
-// or if you're using CommonJS:
-// const gawk = require('gawk').gawk;
+import gawk from 'gawk';
 
 const obj = gawk({
     foo: 'bar'
 });
 
-obj.watch(evt => {
+gawk.watch(obj, evt => {
     console.info('object changed!');
-    console.info('new value =', evt.target.toJS());
+    console.info('new value =', evt.target);
 });
 
-obj.set('foo', 'baz');
+obj.foo = 'baz';
 
-console.info(obj.toJS()); // { foo: 'baz' }
+console.info(obj); // { foo: 'baz' }
 ```
 
 You can also be notified if a deep child is changed:
@@ -55,14 +47,14 @@ const obj = gawk({
     }
 });
 
-obj.watch(evt => {
+gawk.watch(obj, evt => {
     console.info('object changed!');
-    console.info('new value =', evt.target.toJS());
+    console.info('new value =', evt.target);
 });
 
-obj.get(['foo', 'bar']).push('c', 'd');
+obj.foo.bar.push('c', 'd');
 
-console.info(obj.toJS()); // { foo: { bar: ['a', 'b', 'c', 'd'] } }
+console.info(obj); // { foo: { bar: ['a', 'b', 'c', 'd'] } }
 ```
 
 ## License

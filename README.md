@@ -9,17 +9,11 @@
 [![Dev Deps][david-dev-image]][david-dev-url]
 
 Gawk is a observable model that wraps JavaScript data types. Once a JavaScript
-value is wrapped, it allows you to listen for changes. You can observe deeply
-nested objects too.
+value is gawked, you can listen for changes including deeply nested changes.
 
-Gawk supports the common built-in data types such as string, boolean, number,
-array, object, function, null, and undefined. Anything that you can represent
-in a JSON object, you can gawk.
+Only arrays and objects can be gawked. All other types are passed through.
 
-Gawked arrays, objects, and functions have unique methods for common tasks. For
-example, `GawkArray` instances have `push()` and `pop()` methods.
-
-> Note: gawk requires Node.js 4 or newer.
+> Note: gawk uses ES2015 proxies and thus requires Node.js 6 or newer.
 
 ## Installation
 
@@ -28,22 +22,20 @@ example, `GawkArray` instances have `push()` and `pop()` methods.
 ## Examples
 
 ```javascript
-import { gawk } from 'gawk';
-// or if you're using CommonJS:
-// const gawk = require('gawk').gawk;
+import gawk from 'gawk';
 
 const obj = gawk({
     foo: 'bar'
 });
 
-obj.watch(evt => {
+gawk.watch(obj, (obj, source) => {
     console.info('object changed!');
-    console.info('new value =', evt.target.toJS());
+    console.info('new value =', evt.target);
 });
 
-obj.set('foo', 'baz');
+obj.foo = 'baz';
 
-console.info(obj.toJS()); // { foo: 'baz' }
+console.info(obj); // { foo: 'baz' }
 ```
 
 You can also be notified if a deep child is changed:
@@ -55,15 +47,38 @@ const obj = gawk({
     }
 });
 
-obj.watch(evt => {
+gawk.watch(obj, (obj, source) => {
     console.info('object changed!');
-    console.info('new value =', evt.target.toJS());
+    console.info('new value =', evt.target);
 });
 
-obj.get(['foo', 'bar']).push('c', 'd');
+obj.foo.bar.push('c', 'd');
 
-console.info(obj.toJS()); // { foo: { bar: ['a', 'b', 'c', 'd'] } }
+console.info(obj); // { foo: { bar: ['a', 'b', 'c', 'd'] } }
 ```
+
+You can also directly create `GawkObject` and `GawkArray` objects:
+
+```javascript
+import { GawkArray, GawkObject } from 'gawk';
+
+const obj = new GawkObject({ foo: 'bar' });
+const arr = new GawkArray('a', 'b', 'c');
+```
+
+## Upgrading to v3
+
+Gawk v3 has dropped all gawk data types except `GawkArray` and `GawkObject`.
+
+Since Gawk v3 uses ES6 Proxies, you no longer need to call `obj.get()`,
+`obj.set()`, `obj.delete()`, etc.
+
+Methods `obj.watch()`, `obj.merge()`, and `obj.mergeDeep()` have moved to
+`gawk.watch()`, `gawk.merge()`, and `gawk.mergeDeep()`. The first argument must
+be a gawk object.
+
+Gawk v3 no longer hashes values. This means speed. Gawk v3 is about 19 times
+faster than v1 and v2.
 
 ## License
 

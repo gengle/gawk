@@ -1,6 +1,6 @@
 {
   "name": "gawk",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "Observable JavaScript object model",
   "main": "./dist/index.js",
   "author": "Chris Barber <chris@cb1inc.com> (https://github.com/cb1kenobi)",
@@ -23,30 +23,29 @@
     "test": "gulp test"
   },
   "dependencies": {
-    "object-hash": "^1.1.2",
-    "source-map-support": "^0.4.1"
+    "source-map-support": "^0.4.6"
   },
   "devDependencies": {
-    "babel-eslint": "^6.1.0",
-    "babel-preset-nodejs-lts": "^1.2.2",
+    "babel-eslint": "^7.1.0",
+    "babel-plugin-transform-es2015-modules-commonjs": "^6.18.0",
     "chai": "^3.5.0",
-    "codeclimate-test-reporter": "^0.3.3",
-    "coveralls": "^2.11.9",
-    "del": "^2.2.1",
+    "codeclimate-test-reporter": "^0.4.0",
+    "coveralls": "^2.11.15",
+    "del": "^2.2.2",
     "esdoc-es7-plugin": "^0.0.3",
     "gulp": "^3.9.1",
     "gulp-babel": "^6.1.2",
-    "gulp-babel-istanbul": "^1.4.0",
-    "gulp-debug": "^2.1.2",
-    "gulp-esdoc": "^0.2.0",
-    "gulp-eslint": "^3.0.0",
+    "gulp-babel-istanbul": "^1.5.0",
+    "gulp-debug": "^3.0.0",
+    "gulp-esdoc": "^0.3.0",
+    "gulp-eslint": "^3.0.1",
     "gulp-filter": "^4.0.0",
     "gulp-inject-modules": "^1.0.0",
-    "gulp-load-plugins": "^1.2.4",
-    "gulp-mocha": "^2.2.0",
+    "gulp-load-plugins": "^1.4.0",
+    "gulp-mocha": "^3.0.1",
     "gulp-plumber": "^1.1.0",
-    "gulp-sourcemaps": "^2.0.0-alpha",
-    "sinon": "^1.17.4",
+    "gulp-sourcemaps": "^2.2.0",
+    "sinon": "^1.17.6",
     "sinon-chai": "^2.8.0"
   },
   "homepage": "https://github.com/cb1kenobi/gawk",
@@ -56,6 +55,6 @@
     "url": "git://github.com/cb1kenobi/gawk.git"
   },
   "engines": {
-    "node": ">=4.0.0"
+    "node": ">=6.0.0"
   }
 }

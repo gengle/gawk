@@ -26,7 +26,7 @@ describe('GawkObject', () => {
 			expect(gobj).to.be.an.object;
 			expect(gobj).to.deep.equal(obj);
 			expect(gobj.arr).to.be.instanceof(GawkArray);
-			expect(gobj.arr.__gawk__.hasParent(gobj)).to.be.true;
+			expect(gobj.arr.__gawk__.parents.has(gobj)).to.be.true;
 		});
 
 		it('should gawk object with nested objects', () => {
@@ -36,7 +36,7 @@ describe('GawkObject', () => {
 			expect(gobj).to.be.an.object;
 			expect(gobj).to.deep.equal(obj);
 			expect(gobj.foo).to.be.instanceof(GawkObject);
-			expect(gobj.foo.__gawk__.hasParent(gobj)).to.be.true;
+			expect(gobj.foo.__gawk__.parents.has(gobj)).to.be.true;
 		});
 
 		it('should create a gawk object without an explicit value', () => {
@@ -52,6 +52,29 @@ describe('GawkObject', () => {
 	});
 
 	describe('new GawkObject()', () => {
+		it('should not allow __gawk__ to be set', () => {
+			const gobj = new GawkObject;
+			expect(gobj).to.have.property('__gawk__');
+			expect(() => {
+				gobj.__gawk__ = 'foo';
+			}).to.throw(Error);
+		});
+
+		it('should not allow __gawk__ to be deleted', () => {
+			const gobj = new GawkObject;
+			expect(gobj).to.have.property('__gawk__');
+			expect(() => {
+				delete gobj.__gawk__;
+			}).to.throw(Error);
+		});
+
+		it('should fail if gawking an object that is the parent', () => {
+			const gobj = new GawkObject;
+			expect(() => {
+				gawk(gobj, gobj);
+			}).to.throw(Error);
+		});
+
 		it('should throw TypeError for non-object value', () => {
 			expect(() => new GawkObject(true)).to.throw(TypeError);
 			expect(() => new GawkObject('foo')).to.throw(TypeError);
@@ -136,7 +159,7 @@ describe('GawkObject', () => {
 			gobj.foo = {};
 			gobj.foo.bar = 'wiz';
 			expect(gobj.foo).to.be.instanceof(GawkObject);
-			expect(gobj.foo.__gawk__.hasParent(gobj)).to.be.true;
+			expect(gobj.foo.__gawk__.parents.has(gobj)).to.be.true;
 			expect(gobj).to.deep.equal({ foo: { bar: 'wiz' } });
 		});
 
@@ -151,7 +174,7 @@ describe('GawkObject', () => {
 
 			expect(gobj).to.deep.equal({ foo: { bar: 'wiz' } });
 			expect(gobj.foo).to.be.instanceof(GawkObject);
-			expect(gobj.foo.__gawk__.hasParent(gobj)).to.be.true;
+			expect(gobj.foo.__gawk__.parents.has(gobj)).to.be.true;
 		});
 
 		it('should override a different gawk type on set', () => {
@@ -224,12 +247,18 @@ describe('GawkObject', () => {
 			expect(gobj).to.deep.equal({ foo: 'bar', pi: 3.14 });
 		});
 
+		it('should do nothing if not merging anything', () => {
+			let gobj = gawk({ foo: 'bar' });
+			gobj = gawk.merge(gobj);
+			expect(gobj).to.deep.equal({ foo: 'bar' });
+		});
+
 		it('should merge multiple JS objects and GawkObjects', () => {
 			let gobj = gawk({ foo: 'bar' });
 			gobj = gawk.merge(gobj, { baz: 'wiz' }, gawk({ pi: 3.14 }), { num: 123 }, gawk({ arr: ['a', 'b'] }));
 			expect(gobj).to.deep.equal({ foo: 'bar', baz: 'wiz', pi: 3.14, num: 123, arr: ['a', 'b'] });
 			expect(gobj.arr).to.be.instanceof(GawkArray);
-			expect(gobj.arr.__gawk__.hasParent(gobj)).to.be.true;
+			expect(gobj.arr.__gawk__.parents.has(gobj)).to.be.true;
 		});
 
 		it('should merge and overwrite', () => {
@@ -280,7 +309,7 @@ describe('GawkObject', () => {
 			gawk.merge(gobj, { foo: { pi: 3.14 } });
 			expect(gobj).to.deep.equal({ foo: { pi: 3.14 }});
 			expect(gobj.foo).to.be.instanceof(GawkObject);
-			expect(gobj.foo.__gawk__.hasParent(gobj)).to.be.true;
+			expect(gobj.foo.__gawk__.parents.has(gobj)).to.be.true;
 		});
 	});
 
@@ -302,7 +331,7 @@ describe('GawkObject', () => {
 			gobj = gawk.mergeDeep(gobj, { baz: 'wiz' }, gawk({ pi: 3.14 }), { num: 123 }, gawk({ arr: ['a', 'b'] }));
 			expect(gobj).to.deep.equal({ foo: 'bar', baz: 'wiz', pi: 3.14, num: 123, arr: ['a', 'b'] });
 			expect(gobj.arr).to.be.instanceof(GawkArray);
-			expect(gobj.arr.__gawk__.hasParent(gobj)).to.be.true;
+			expect(gobj.arr.__gawk__.parents.has(gobj)).to.be.true;
 		});
 
 		it('should merge and overwrite', () => {
@@ -335,11 +364,11 @@ describe('GawkObject', () => {
 				}
 			});
 			expect(gobj.foo).to.be.instanceof(GawkObject);
-			expect(gobj.foo.__gawk__.hasParent(gobj)).to.be.true;
+			expect(gobj.foo.__gawk__.parents.has(gobj)).to.be.true;
 			expect(gobj.foo.bar).to.be.instanceof(GawkObject);
-			expect(gobj.foo.bar.__gawk__.hasParent(gobj.foo)).to.be.true;
+			expect(gobj.foo.bar.__gawk__.parents.has(gobj.foo)).to.be.true;
 			expect(gobj.foo.biz).to.be.instanceof(GawkObject);
-			expect(gobj.foo.biz.__gawk__.hasParent(gobj.foo)).to.be.true;
+			expect(gobj.foo.biz.__gawk__.parents.has(gobj.foo)).to.be.true;
 		});
 	});
 });

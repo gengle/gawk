@@ -81,7 +81,7 @@ describe('gawk.watch()', () => {
 		const nested = gobj.foo;
 
 		expect(nested).to.be.instanceof(GawkObject);
-		expect(nested.__gawk__.hasParent(gobj)).to.be.true;
+		expect(nested.__gawk__.parents.has(gobj)).to.be.true;
 
 		gawk.watch(gobj, (obj, source) => {
 			expect(obj).to.equal(gobj);
@@ -259,22 +259,22 @@ describe('gawk.watch()', () => {
 		gobj.foo = child;
 		// { foo: {} }
 		expect(count).to.equal(1);
-		expect(child.__gawk__.hasParent(gobj)).to.be.true;
+		expect(child.__gawk__.parents.has(gobj)).to.be.true;
 
 		const bar = gawk({ bar: 'wiz' });
 		gawk.merge(child, bar);
 		// { foo: { bar: 'wiz' } }
 		expect(count).to.equal(2);
-		expect(bar.__gawk__.hasParent(child)).to.be.false;
+		expect(bar.__gawk__.parents.has(child)).to.be.false;
 
 		const foo = gobj.foo;
-		expect(foo.__gawk__.hasParent(gobj)).to.be.true;
+		expect(foo.__gawk__.parents.has(gobj)).to.be.true;
 
 		gawk.merge(child, { bar: 'wow' });
 		// { foo: { bar: 'wow' } }
 		expect(count).to.equal(3);
-		expect(bar.__gawk__.hasParent(child)).to.be.false;
-		expect(child.__gawk__.hasParent(gobj)).to.be.true;
+		expect(bar.__gawk__.parents.has(child)).to.be.false;
+		expect(child.__gawk__.parents.has(gobj)).to.be.true;
 
 		expect(gobj).to.deep.equal({ foo: { bar: 'wow' } });
 	});
@@ -311,12 +311,12 @@ describe('gawk.watch()', () => {
 		expect(count).to.equal(2);
 
 		const foo = gobj.foo;
-		expect(foo.__gawk__.hasParent(gobj)).to.be.true;
+		expect(foo.__gawk__.parents.has(gobj)).to.be.true;
 
 		gawk.mergeDeep(child, { bar: { paz: 789 } });
 		// { foo: { bar: { pow: 123, wiz: 456, paz: 789 } } }
 		expect(count).to.equal(3);
-		expect(bar.__gawk__.hasParent(child)).to.be.false;
+		expect(bar.__gawk__.parents.has(child)).to.be.false;
 
 		expect(gobj).to.deep.equal({ foo: { bar: { pow: 123, wiz: 456, paz: 789 } } });
 	});
@@ -364,8 +364,6 @@ describe('gawk.watch()', () => {
 		gobj.pop();
 		gobj.unshift('d');
 		gobj.shift();
-
-		expect(count).to.equal(4);
 	});
 
 	it('should be notified when deeply nested children change', () => {
@@ -380,8 +378,8 @@ describe('gawk.watch()', () => {
 		arr1.push(arr2);
 		arr2.push(arr3);
 
-		expect(arr2.__gawk__.hasParent(arr1)).to.be.true;
-		expect(arr3.__gawk__.hasParent(arr2)).to.be.true;
+		expect(arr2.__gawk__.parents.has(arr1)).to.be.true;
+		expect(arr3.__gawk__.parents.has(arr2)).to.be.true;
 
 		gawk.watch(arr1, obj => {
 			count1++;
@@ -409,6 +407,52 @@ describe('gawk.watch()', () => {
 
 		expect(arr1.length).to.equal(1);
 		expect(arr1).to.deep.equal([[['foo']]]);
+	});
+
+	it('should notify parent if property is deleted', () => {
+		const gobj = gawk({ foo: { bar: 'baz' } });
+
+		let count = 0;
+		gawk.watch(gobj, obj => {
+			count++;
+		});
+
+		expect(gobj).to.deep.equal({ foo: { bar: 'baz' } });
+		delete gobj.foo;
+		expect(gobj).to.deep.equal({});
+
+		expect(count).to.equal(1);
+	});
+
+	it('should notify parent if index is deleted', () => {
+		const gobj = gawk({ foo: { bar: [ 'baz' ] } });
+
+		let count = 0;
+		gawk.watch(gobj, obj => {
+			count++;
+		});
+
+		expect(gobj).to.deep.equal({ foo: { bar: [ 'baz' ] } });
+		delete gobj.foo.bar[0];
+		expect(gobj).to.deep.equal({ foo: { bar: [] } });
+
+		expect(count).to.equal(1);
+	});
+
+	it('should copy listeners from another gawk object', () => {
+		const gobj = gawk({ foo: 'bar' });
+
+		let count = 0;
+		gawk.watch(gobj, obj => {
+			count++;
+		});
+
+		const gobj2 = new GawkObject(gobj);
+		expect(gobj2).to.deep.equal({ foo: 'bar' });
+
+		gobj2.baz = 'wiz';
+		expect(gobj2).to.deep.equal({ foo: 'bar', baz: 'wiz' });
+		expect(count).to.equal(1);
 	});
 });
 

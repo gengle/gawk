@@ -28,7 +28,7 @@ const obj = gawk({
     foo: 'bar'
 });
 
-gawk.watch(obj, evt => {
+gawk.watch(obj, (obj, source) => {
     console.info('object changed!');
     console.info('new value =', evt.target);
 });
@@ -47,7 +47,7 @@ const obj = gawk({
     }
 });
 
-gawk.watch(obj, evt => {
+gawk.watch(obj, (obj, source) => {
     console.info('object changed!');
     console.info('new value =', evt.target);
 });
@@ -55,6 +55,15 @@ gawk.watch(obj, evt => {
 obj.foo.bar.push('c', 'd');
 
 console.info(obj); // { foo: { bar: ['a', 'b', 'c', 'd'] } }
+```
+
+You can also directly create `GawkObject` and `GawkArray` objects:
+
+```javascript
+import gawk, { GawkArray, GawkObject } from 'gawk';
+
+const obj = new GawkObject({ foo: 'bar' });
+const arr = new GawkArray('a', 'b', 'c');
 ```
 
 ## License

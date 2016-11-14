@@ -38,6 +38,24 @@ describe('GawkArray', () => {
 		});
 	});
 
+	describe('new GawkArray()', () => {
+		it('should not allow __gawk__ to be set', () => {
+			const gobj = new GawkArray;
+			expect(gobj).to.have.property('__gawk__');
+			expect(() => {
+				gobj.__gawk__ = 'foo';
+			}).to.throw(Error);
+		});
+
+		it('should not allow __gawk__ to be deleted', () => {
+			const gobj = new GawkArray;
+			expect(gobj).to.have.property('__gawk__');
+			expect(() => {
+				delete gobj.__gawk__;
+			}).to.throw(Error);
+		});
+	});
+
 	describe('toString()', () => {
 		it('should support toString()', () => {
 			const garr = gawk(['a', null, undefined, 123, 3.14, NaN, Infinity]);
@@ -118,11 +136,11 @@ describe('GawkArray', () => {
 			garr.fill(obj);
 			expect(garr).to.deep.equal([obj, obj, obj]);
 			expect(garr[0]).to.be.instanceof(GawkObject);
-			expect(garr[0].__gawk__.hasParent(garr)).to.be.true;
+			expect(garr[0].__gawk__.parents.has(garr)).to.be.true;
 			expect(garr[1]).to.be.instanceof(GawkObject);
-			expect(garr[1].__gawk__.hasParent(garr)).to.be.true;
+			expect(garr[1].__gawk__.parents.has(garr)).to.be.true;
 			expect(garr[2]).to.be.instanceof(GawkObject);
-			expect(garr[2].__gawk__.hasParent(garr)).to.be.true;
+			expect(garr[2].__gawk__.parents.has(garr)).to.be.true;
 		});
 
 		it('should fill an array with objects with start', () => {
@@ -131,9 +149,9 @@ describe('GawkArray', () => {
 			garr.fill(obj, 1);
 			expect(garr).to.deep.equal(['a', obj, obj]);
 			expect(garr[1]).to.be.instanceof(GawkObject);
-			expect(garr[1].__gawk__.hasParent(garr)).to.be.true;
+			expect(garr[1].__gawk__.parents.has(garr)).to.be.true;
 			expect(garr[2]).to.be.instanceof(GawkObject);
-			expect(garr[2].__gawk__.hasParent(garr)).to.be.true;
+			expect(garr[2].__gawk__.parents.has(garr)).to.be.true;
 		});
 
 		it('should fill an array with objects with start and end', () => {
@@ -142,27 +160,27 @@ describe('GawkArray', () => {
 			garr.fill(obj, 1, 4);
 			expect(garr).to.deep.equal(['a', obj, obj, obj, 'e']);
 			expect(garr[1]).to.be.instanceof(GawkObject);
-			expect(garr[1].__gawk__.hasParent(garr)).to.be.true;
+			expect(garr[1].__gawk__.parents.has(garr)).to.be.true;
 			expect(garr[2]).to.be.instanceof(GawkObject);
-			expect(garr[2].__gawk__.hasParent(garr)).to.be.true;
+			expect(garr[2].__gawk__.parents.has(garr)).to.be.true;
 			expect(garr[3]).to.be.instanceof(GawkObject);
-			expect(garr[3].__gawk__.hasParent(garr)).to.be.true;
+			expect(garr[3].__gawk__.parents.has(garr)).to.be.true;
 		});
 
 		it('should detach existing gawk objects', () => {
 			const gobj = gawk({});
 			const garr = gawk([gobj, 'a', 'b']);
-			expect(gobj.__gawk__.hasParent(garr)).to.be.true;
+			expect(gobj.__gawk__.parents.has(garr)).to.be.true;
 			const obj = { x: 1 };
 			garr.fill(obj);
 			expect(garr).to.deep.equal([obj, obj, obj]);
 			expect(garr[0]).to.be.instanceof(GawkObject);
-			expect(garr[0].__gawk__.hasParent(garr)).to.be.true;
+			expect(garr[0].__gawk__.parents.has(garr)).to.be.true;
 			expect(garr[1]).to.be.instanceof(GawkObject);
-			expect(garr[1].__gawk__.hasParent(garr)).to.be.true;
+			expect(garr[1].__gawk__.parents.has(garr)).to.be.true;
 			expect(garr[2]).to.be.instanceof(GawkObject);
-			expect(garr[2].__gawk__.hasParent(garr)).to.be.true;
-			expect(gobj.__gawk__.hasParent(garr)).to.be.false;
+			expect(garr[2].__gawk__.parents.has(garr)).to.be.true;
+			expect(gobj.__gawk__.parents.has(garr)).to.be.false;
 		});
 	});
 
@@ -185,10 +203,10 @@ describe('GawkArray', () => {
 		it('should detach popped gawk object', () => {
 			const gobj = gawk({});
 			const garr = gawk([gobj]);
-			expect(gobj.__gawk__.hasParent(garr)).to.be.true;
+			expect(gobj.__gawk__.parents.has(garr)).to.be.true;
 			const gobj2 = garr.pop();
 			expect(gobj2).to.equal(gobj);
-			expect(gobj.__gawk__.hasParent(garr)).to.be.false;
+			expect(gobj.__gawk__.parents.has(garr)).to.be.false;
 		});
 	});
 
@@ -219,7 +237,7 @@ describe('GawkArray', () => {
 			expect(n).to.equal(3);
 			expect(garr).to.have.lengthOf(3);
 			expect(garr).to.deep.equal(['a', { foo: 'bar' }, 'c']);
-			expect(garr[1].__gawk__.hasParent(garr)).to.be.true;
+			expect(garr[1].__gawk__.parents.has(garr)).to.be.true;
 		});
 	});
 
@@ -242,10 +260,10 @@ describe('GawkArray', () => {
 		it('should detach shifted gawk object', () => {
 			const gobj = gawk({});
 			const garr = gawk([gobj]);
-			expect(gobj.__gawk__.hasParent(garr)).to.be.true;
+			expect(gobj.__gawk__.parents.has(garr)).to.be.true;
 			const gobj2 = garr.shift();
 			expect(gobj2).to.equal(gobj);
-			expect(gobj.__gawk__.hasParent(garr)).to.be.false;
+			expect(gobj.__gawk__.parents.has(garr)).to.be.false;
 		});
 	});
 
@@ -267,34 +285,34 @@ describe('GawkArray', () => {
 
 		it('should detach and remove gawk objects after the start index', () => {
 			const garr = new GawkArray({ a: 1 }, { b: 2 }, { c: 3 });
-			expect(garr[0].__gawk__.hasParent(garr)).to.be.true;
-			expect(garr[1].__gawk__.hasParent(garr)).to.be.true;
-			expect(garr[2].__gawk__.hasParent(garr)).to.be.true;
+			expect(garr[0].__gawk__.parents.has(garr)).to.be.true;
+			expect(garr[1].__gawk__.parents.has(garr)).to.be.true;
+			expect(garr[2].__gawk__.parents.has(garr)).to.be.true;
 
 			const arr = garr.splice(1);
 			expect(arr).to.have.lengthOf(2);
 			expect(arr).to.deep.equal([ { b: 2 }, { c: 3 } ]);
 			expect(garr).to.deep.equal([ { a: 1 } ]);
-			expect(garr[0].__gawk__.hasParent(garr)).to.be.true;
-			expect(arr[0].__gawk__.hasParent(garr)).to.be.false;
-			expect(arr[0].__gawk__.hasParent(garr)).to.be.false;
+			expect(garr[0].__gawk__.parents.has(garr)).to.be.true;
+			expect(arr[0].__gawk__.parents.has(garr)).to.be.false;
+			expect(arr[0].__gawk__.parents.has(garr)).to.be.false;
 		});
 
 		it('should remove elements and add elements', () => {
 			const garr = new GawkArray({ a: 1 }, { b: 2 }, { c: 3 });
-			expect(garr[0].__gawk__.hasParent(garr)).to.be.true;
-			expect(garr[1].__gawk__.hasParent(garr)).to.be.true;
-			expect(garr[2].__gawk__.hasParent(garr)).to.be.true;
+			expect(garr[0].__gawk__.parents.has(garr)).to.be.true;
+			expect(garr[1].__gawk__.parents.has(garr)).to.be.true;
+			expect(garr[2].__gawk__.parents.has(garr)).to.be.true;
 
 			const arr = garr.splice(1, 1, { d: 4 }, { e: 5 });
 			expect(arr).to.have.lengthOf(1);
 			expect(arr).to.deep.equal([ { b: 2 } ]);
 			expect(garr).to.deep.equal([ { a: 1 }, { d: 4 }, { e: 5 }, { c: 3 } ]);
-			expect(garr[0].__gawk__.hasParent(garr)).to.be.true;
-			expect(garr[1].__gawk__.hasParent(garr)).to.be.true;
-			expect(garr[2].__gawk__.hasParent(garr)).to.be.true;
-			expect(garr[3].__gawk__.hasParent(garr)).to.be.true;
-			expect(arr[0].__gawk__.hasParent(garr)).to.be.false;
+			expect(garr[0].__gawk__.parents.has(garr)).to.be.true;
+			expect(garr[1].__gawk__.parents.has(garr)).to.be.true;
+			expect(garr[2].__gawk__.parents.has(garr)).to.be.true;
+			expect(garr[3].__gawk__.parents.has(garr)).to.be.true;
+			expect(arr[0].__gawk__.parents.has(garr)).to.be.false;
 		});
 	});
 
@@ -325,7 +343,7 @@ describe('GawkArray', () => {
 			expect(n).to.equal(3);
 			expect(garr).to.have.lengthOf(3);
 			expect(garr).to.deep.equal(['a', { foo: 'bar' }, 'c']);
-			expect(garr[1].__gawk__.hasParent(garr)).to.be.true;
+			expect(garr[1].__gawk__.parents.has(garr)).to.be.true;
 		});
 	});
 });

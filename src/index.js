@@ -36,7 +36,7 @@ export default function gawk(value, parent) {
 	}
 
 	if (parent) {
-		gawked.__gawk__.addParent(parent);
+		gawked.__gawk__.parents.add(parent);
 	}
 
 	return gawked;
@@ -56,62 +56,11 @@ function gawkify(instance) {
 	const internal = Object.defineProperty(instance, '__gawk__', {
 		value: {
 			/**
-			 * A list of all the gawk object's parents. These parents are notified
-			 * when a change occurs.
-			 * @type {Map<String, WeakMap>}
+			 * A list of all the gawk object's parents. These parents are
+			 * notified when a change occurs.
+			 * @type {Set}
 			 */
-			parents: new Map,
-
-			/**
-			 * Adds a parent gawk object.
-			 *
-			 * @param {GawkArray|GawkObject} parent - The parent object to add.
-			 */
-			addParent: parent => {
-				if (!internal.findParent(parent)) {
-					internal.parents.set(Math.random(), new WeakMap().set(WEAK_REF_KEY, parent));
-				}
-			},
-
-			/**
-			 * Finds a parent by reference and returns its key.
-			 *
-			 * @param {GawkArray|GawkObject} parent - The parent object to find.
-			 * @param {Number|null}
-			 */
-			findParent: parent => {
-				let found = null;
-				for (const [ key, wm ] of internal.parents) {
-					if (!wm.has(WEAK_REF_KEY)) {
-						internal.parents.delete(key);
-					} else if (wm.get(WEAK_REF_KEY) === parent) {
-						found = key;
-					}
-				}
-				return found;
-			},
-
-			/**
-			 * Determines if a parent already exists.
-			 *
-			 * @param {GawkArray|GawkObject} parent - The parent object to check.
-			 * @returns {Boolean}
-			 */
-			hasParent: parent => {
-				return !!internal.findParent(parent);
-			},
-
-			/**
-			 * Removes a parent if exists.
-			 *
-			 * @param {GawkArray|GawkObject} parent - The parent object to remove.
-			 */
-			removeParent: parent => {
-				const key = internal.findParent(parent);
-				if (key) {
-					internal.parents.delete(key);
-				}
-			},
+			parents: new Set,
 
 			/**
 			 * A list of listener functions call invoke when a change occurs.
@@ -157,18 +106,17 @@ function gawkify(instance) {
 			notify: (source = instance) => {
 				if (internal.queue) {
 					internal.queue.add(instance);
-				} else {
-					for (const listener of internal.listeners) {
-						listener(instance, source);
-					}
+					return;
+				}
 
-					for (const [ key, wm ] of internal.parents) {
-						if (!wm.has(WEAK_REF_KEY)) {
-							internal.parents.delete(key);
-						} else {
-							wm.get(WEAK_REF_KEY).__gawk__.notify(source);
-						}
-					}
+				// notify all of this object's listeners
+				for (const listener of internal.listeners) {
+					listener(instance, source);
+				}
+
+				// notify all of this object's parents
+				for (const parent of internal.parents) {
+					parent.__gawk__.notify(source);
 				}
 			}
 		}
@@ -197,12 +145,14 @@ export class GawkArray extends Array {
 					throw new Error('"__gawk__" is read-only');
 				}
 
+				// console.log('SETTING ' + prop);
+
 				const existing = target[prop];
 				const changed = existing !== value;
 
 				if (!isNaN(parseInt(prop))) {
 					if (existing instanceof GawkArray || existing instanceof GawkObject) {
-						existing.__gawk__.removeParent(instance);
+						existing.__gawk__.parents.delete(instance);
 					}
 					target[prop] = gawk(value, instance);
 				} else {
@@ -220,18 +170,23 @@ export class GawkArray extends Array {
 				if (prop === '__gawk__') {
 					throw new Error('"__gawk__" is read-only');
 				}
+
+				// console.log('DELETING ' + prop);
+
 				let exists = true;
 				if (!isNaN(parseInt(prop))) {
 					const value = target[prop];
 					if (value instanceof GawkArray || value instanceof GawkObject) {
-						value.__gawk__.removeParent(instance);
+						value.__gawk__.parents.delete(instance);
 					}
 					exists = target[prop] !== undefined;
 				}
+
 				const result = delete target[prop];
 				if (exists && result) {
 					instance.__gawk__.notify();
 				}
+
 				return result;
 			}
 		});
@@ -244,69 +199,42 @@ export class GawkArray extends Array {
 	}
 
 	/**
-	 * Creates a new gawk array with the contents of this gawk array and one or
-	 * more additional arrays or gawk arrays.
+	 * Removes the last element of this array.
 	 *
-	 * @param {*} [...items] - One or more items to append to the new array.
-	 * @returns {GawkArray}
+	 * @returns {*}
 	 * @access public
-	 * /
-	concat(...items) {
-		const ga = new GawkArray;
-		ga.push.apply(ga, this);
-		ga.push.apply(ga, items);
-		for (const item of ga) {
-			if (item instanceof GawkArray || item instanceof GawkObject) {
-				item.__gawk__.addParent(ga);
-			}
-		}
-		return ga;
+	 */
+	pop() {
+		this.__gawk__.pause();
+		const item = super.pop();
+		this.__gawk__.resume();
+		return item;
 	}
 
 	/**
-	 * Fills elements of the array with a single value for the given range.
+	 * Removes the first element of this array.
 	 *
-	 * @param {*} value - The value to fill with.
-	 * @param {Number} [start=0] - The start index.
-	 * @param {Number} [end=length] - The end index.
+	 * @returns {*}
+	 * @access public
+	 */
+	shift() {
+		this.__gawk__.pause();
+		const item = super.shift();
+		this.__gawk__.resume();
+		return item;
+	}
+
+	/**
+	 * Inserts or removes items from this array.
+	 *
+	 * @param {Number} [start] - The starting index.
+	 * @param {Number} [deleteCount] - The number of items to delete. If not
+	 * specified, but `start` is, then it defaults to the length of this array.
+	 * @param {*} [...items] - Zero or more items to insert at the specified
+	 * `start` index.
 	 * @returns {GawkArray}
 	 * @access public
-	 * /
-	fill(value, start = 0, end = this.length) {
-		for (let i = start; i < end; i++) {
-			if (this[i] instanceof GawkArray || this[i] instanceof GawkObject) {
-				this[i].__gawk__.removeParent(this);
-			}
-		}
-		super.fill(gawk(value, this), start, end);
-		this.__gawk__.notify();
-		return this;
-	}
-
-	pop() {
-		const item = super.pop();
-		if (item instanceof GawkArray || item instanceof GawkObject) {
-			item.__gawk__.removeParent(this);
-		}
-		this.__gawk__.notify();
-		return item;
-	}
-
-	push(...items) {
-		const len = super.push.apply(this, items.map(item => gawk(item, this)));
-		this.__gawk__.notify();
-		return len;
-	}
-
-	shift() {
-		const item = super.shift();
-		if (item instanceof GawkArray || item instanceof GawkObject) {
-			item.__gawk__.removeParent(this);
-		}
-		this.__gawk__.notify();
-		return item;
-	}
-*/
+	 */
 	splice(start, deleteCount, ...items) {
 		if (start !== undefined && deleteCount === undefined) {
 			deleteCount = this.length - start;
@@ -321,20 +249,27 @@ export class GawkArray extends Array {
 
 		for (const item of arr) {
 			if (item instanceof GawkArray || item instanceof GawkObject) {
-				item.__gawk__.removeParent(this);
+				item.__gawk__.parents.delete(this);
 			}
 		}
 
 		this.__gawk__.notify();
 		return arr;
 	}
-/*
+
+	/**
+	 * Adds zero or more items to the beginning of this array.
+	 *
+	 * @param {*} [...items] - The items to add.
+	 * @returns {Number} The new length
+	 * @access public
+	 */
 	unshift(...items) {
+		this.__gawk__.pause();
 		const len = super.unshift.apply(this, items.map(item => gawk(item, this)));
-		this.__gawk__.notify();
+		this.__gawk__.resume();
 		return len;
 	}
-	*/
 }
 
 /**
@@ -359,12 +294,16 @@ export class GawkObject {
 				if (prop === '__gawk__') {
 					throw new Error('"__gawk__" is read-only');
 				}
+
+				// console.log('SETTING ' + prop);
+
 				const changed = !target.hasOwnProperty(prop) || target[prop] !== value;
 				delete target[prop];
 				target[prop] = gawk(value, instance);
 				if (changed) {
 					target.__gawk__.notify();
 				}
+
 				return true;
 			},
 
@@ -372,15 +311,20 @@ export class GawkObject {
 				if (prop === '__gawk__') {
 					throw new Error('"__gawk__" is read-only');
 				}
+
+				// console.log('DELETING ' + prop);
+
 				const value = target[prop];
 				if (value instanceof GawkArray || value instanceof GawkObject) {
-					value.__gawk__.removeParent(target);
+					value.__gawk__.parents.delete(target);
 				}
+
 				const exists = target.hasOwnProperty(prop);
 				const result = delete target[prop];
 				if (exists && result) {
 					instance.__gawk__.notify();
 				}
+
 				return result;
 			}
 		});
@@ -492,7 +436,9 @@ function mix(objs, deep) {
 		for (const key of Object.keys(src)) {
 			const srcValue = src[key];
 
-			if (deep && srcValue !== null && typeof srcValue === 'object' && !Array.isArray(srcValue) && !(srcValue instanceof GawkArray)) {
+			if (deep && srcValue !== null && typeof srcValue === 'object' &&
+				!Array.isArray(srcValue) && !(srcValue instanceof GawkArray)
+			) {
 				if (!(gobj[key] instanceof GawkObject)) {
 					gobj[key] = gawk({}, gobj);
 				}

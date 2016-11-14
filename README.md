@@ -66,19 +66,19 @@ const obj = new GawkObject({ foo: 'bar' });
 const arr = new GawkArray('a', 'b', 'c');
 ```
 
-## Upgrading from v1
+## Upgrading to v3
 
-Gawk v2 has dropped all gawk data types except `GawkArray` and `GawkObject`.
+Gawk v3 has dropped all gawk data types except `GawkArray` and `GawkObject`.
 
-Since Gawk v2 uses ES6 Proxies, you no longer need to call `obj.get()`,
+Since Gawk v3 uses ES6 Proxies, you no longer need to call `obj.get()`,
 `obj.set()`, `obj.delete()`, etc.
 
 Methods `obj.watch()`, `obj.merge()`, and `obj.mergeDeep()` have moved to
 `gawk.watch()`, `gawk.merge()`, and `gawk.mergeDeep()`. The first argument must
 be a gawk object.
 
-Gawk v2 no longer hashes values. This means speed. Gawk v2 is about 19 times
-faster than v1.
+Gawk v3 no longer hashes values. This means speed. Gawk v3 is about 19 times
+faster than v1 and v2.
 
 ## License
 

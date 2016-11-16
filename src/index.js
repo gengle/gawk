@@ -236,6 +236,8 @@ export class GawkArray extends Array {
 	 * @access public
 	 */
 	splice(start, deleteCount, ...items) {
+		this.__gawk__.pause();
+
 		if (start !== undefined && deleteCount === undefined) {
 			deleteCount = this.length - start;
 		}
@@ -253,7 +255,7 @@ export class GawkArray extends Array {
 			}
 		}
 
-		this.__gawk__.notify();
+		this.__gawk__.resume();
 		return arr;
 	}
 

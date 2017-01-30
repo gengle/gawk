@@ -2,8 +2,6 @@ if (!Error.prepareStackTrace) {
 	require('source-map-support/register');
 }
 
-const WEAK_REF_KEY = {};
-
 /**
  * Creates a gawk object that wraps the specified object.
  *

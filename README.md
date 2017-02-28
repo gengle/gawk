@@ -8,10 +8,13 @@
 [![Deps][david-image]][david-url]
 [![Dev Deps][david-dev-image]][david-dev-url]
 
-Gawk is a observable model that wraps JavaScript data types. Once a JavaScript
-value is gawked, you can listen for changes including deeply nested changes.
+Gawk wraps JavaScript objects and arrays making them observable. Once a
+JavaScript value is gawked, you can listen for changes including deeply nested
+changes. Only objects and arrays can be gawked. All other types are passed
+through.
 
-Only arrays and objects can be gawked. All other types are passed through.
+Gawked objects and arrays can be interacted with as if they were regular
+objects/arrays. Built-in functions such as `JSON.stringify()` work as expected.
 
 > Note: gawk uses ES2015 proxies and thus requires Node.js 6 or newer.
 
@@ -28,9 +31,9 @@ const obj = gawk({
     foo: 'bar'
 });
 
-gawk.watch(obj, (obj, source) => {
+gawk.watch(obj, target => {
     console.info('object changed!');
-    console.info('new value =', evt.target);
+    console.info('new value =', target);
 });
 
 obj.foo = 'baz';
@@ -47,9 +50,9 @@ const obj = gawk({
     }
 });
 
-gawk.watch(obj, (obj, source) => {
+gawk.watch(obj, target => {
     console.info('object changed!');
-    console.info('new value =', evt.target);
+    console.info('new value =', target);
 });
 
 obj.foo.bar.push('c', 'd');

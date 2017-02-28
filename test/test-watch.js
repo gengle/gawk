@@ -113,6 +113,40 @@ describe('gawk.watch()', () => {
 		expect(count).to.equal(1);
 	});
 
+	it('should be notified when array changes by merge', () => {
+		let count = 0;
+		const gobj = gawk({ foo: [] });
+
+		gawk.watch(gobj.foo, obj => {
+			count++;
+		});
+
+		gawk.mergeDeep(gobj, { foo: [1, 2, 3] });
+		expect(count).to.equal(1);
+		expect(gobj).to.deep.equal({ foo: [1, 2, 3] });
+
+		gawk.mergeDeep(gobj, { foo: [4, 5, 6] });
+		expect(count).to.equal(2);
+		expect(gobj).to.deep.equal({ foo: [4, 5, 6] });
+	});
+
+	it('should be notified when array changes by deep merge', () => {
+		let count = 0;
+		const gobj = gawk({ foo: { bar: [] } });
+
+		gawk.watch(gobj.foo, obj => {
+			count++;
+		});
+
+		gawk.mergeDeep(gobj, { foo: { bar: [1, 2, 3] } });
+		expect(count).to.equal(1);
+		expect(gobj).to.deep.equal({ foo: { bar: [1, 2, 3] } });
+
+		gawk.mergeDeep(gobj, { foo: { bar: [4, 5, 6] } });
+		expect(count).to.equal(2);
+		expect(gobj).to.deep.equal({ foo: { bar: [4, 5, 6] } });
+	});
+
 	it('should only notify once after deep merge', () => {
 		const gobj = new GawkObject;
 		let counter = 0;
@@ -364,6 +398,8 @@ describe('gawk.watch()', () => {
 		gobj.pop();
 		gobj.unshift('d');
 		gobj.shift();
+
+		expect(count).to.equal(4);
 	});
 
 	it('should be notified when deeply nested children change', () => {

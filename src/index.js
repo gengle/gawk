@@ -443,6 +443,9 @@ function mix(objs, deep) {
 					gobj[key] = gawk({}, gobj);
 				}
 				mixer(gobj[key], srcValue);
+			} else if (gobj[key] instanceof GawkArray && Array.isArray(srcValue)) {
+				// overwrite destination with new values
+				gobj[key].splice(0, gobj[key].length, ...srcValue);
 			} else {
 				gobj[key] = gawk(srcValue, gobj);
 			}

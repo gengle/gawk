@@ -61,12 +61,18 @@ function gawkify(instance) {
 			parents: new Set,
 
 			/**
-			 * A list of listener functions call invoke when a change occurs.
-			 * @type {Set}
+			 * A map of listener functions to call invoke when a change occurs. The
+			 * associated key value is the optional filter to apply to the listener.
+			 * @type {Map}
 			 */
 			listeners: new Map,
 
-			lastValues: new WeakMap,
+			/**
+			 * A map of listener functions to the last known hash of the stringified
+			 * value. This is used to detect if a filtered watch should be notified.
+			 * @type {WeakMap}
+			 */
+			previous: new WeakMap,
 
 			/**
 			 * A list of child objects that are modified while paused.
@@ -115,6 +121,7 @@ function gawkify(instance) {
 						let obj = instance;
 						let found = true;
 
+						// find the value we're interested in
 						for (let i = 0, len = filter.length; obj && typeof obj === 'object' && i < len; i++) {
 							if (!obj.hasOwnProperty(filter[i])) {
 								found = false;
@@ -124,11 +131,21 @@ function gawkify(instance) {
 							obj = obj[filter[i]];
 						}
 
-						if ((found || internal.lastValues.has(listener)) && internal.lastValues.get(listener) !== obj) {
+						// compute the hash of the stringified value
+						const str = JSON.stringify(obj) || '';
+						let hash = 5381;
+						let i = str.length;
+						while (i) {
+							hash = (hash * 33) ^ str.charCodeAt(--i);
+						}
+						hash = hash >>> 0;
+
+						// check if the value changed
+						if ((found || internal.previous.has(listener)) && hash !== internal.previous.get(listener)) {
 							listener(obj, source);
 						}
 
-						internal.lastValues.set(listener, obj);
+						internal.previous.set(listener, hash);
 					} else {
 						listener(instance, source);
 					}
@@ -429,7 +446,7 @@ gawk.unwatch = function unwatch(subject, listener) {
 	}
 
 	subject.__gawk__.listeners.delete(listener);
-	subject.__gawk__.lastValues.delete(listener);
+	subject.__gawk__.previous.delete(listener);
 
 	return subject;
 };

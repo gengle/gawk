@@ -502,6 +502,15 @@ describe('gawk.watch()', () => {
 		let count = 0;
 
 		gawk.watch(gobj, ['foo', 'baz'], obj => {
+			if (count === 0) {
+				expect(obj).to.equal('pow');
+			} else if (count === 1) {
+				expect(obj).to.equal('zip');
+			} else if (count === 2) {
+				expect(obj).to.be.undefined;
+			} else if (count === 2) {
+				expect(obj).to.equal('zap');
+			}
 			count++;
 		});
 

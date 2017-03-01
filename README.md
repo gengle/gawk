@@ -70,8 +70,8 @@ const obj = gawk({
 	}
 });
 
-gawk.watch(obj, [ 'foo', 'bar' ], (obj, src) => {
-	console.info('bar changed!');
+gawk.watch(obj, [ 'foo', 'bar' ], value => {
+	console.info(`bar changed to ${value}`);
 });
 
 obj.foo.bar = 'world!';

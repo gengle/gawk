@@ -118,13 +118,14 @@ function gawkify(instance) {
 						for (let i = 0, len = filter.length; obj && typeof obj === 'object' && i < len; i++) {
 							if (!obj.hasOwnProperty(filter[i])) {
 								found = false;
+								obj = undefined;
 								break;
 							}
 							obj = obj[filter[i]];
 						}
 
 						if ((found || internal.lastValues.has(listener)) && internal.lastValues.get(listener) !== obj) {
-							listener(instance, source);
+							listener(obj, source);
 						}
 
 						internal.lastValues.set(listener, obj);
@@ -334,7 +335,7 @@ export class GawkObject {
 					throw new Error('"__gawk__" is read-only');
 				}
 
-				console.log('DELETING ' + prop);
+				// console.log('DELETING ' + prop);
 
 				const value = target[prop];
 				if (value instanceof GawkArray || value instanceof GawkObject) {

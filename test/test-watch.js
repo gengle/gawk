@@ -7,13 +7,19 @@ describe('gawk.watch()', () => {
 		}).to.throw(TypeError, 'Expected source to be a GawkArray or GawkObject');
 	});
 
+	it('should fail to watch with invalid filter', () => {
+		expect(() => {
+			gawk.watch(new GawkObject, 123);
+		}).to.throw(TypeError, 'Expected filter to be a stirng or array of strings');
+	});
+
 	it('should fail to watch with non-function listener', () => {
 		expect(() => {
-			gawk.watch({});
+			gawk.watch(new GawkObject);
 		}).to.throw(TypeError, 'Expected listener to be a function');
 
 		expect(() => {
-			gawk.watch({}, 'foo');
+			gawk.watch(new GawkObject, 'foo', 'bar');
 		}).to.throw(TypeError, 'Expected listener to be a function');
 	});
 
@@ -489,6 +495,33 @@ describe('gawk.watch()', () => {
 		gobj2.baz = 'wiz';
 		expect(gobj2).to.deep.equal({ foo: 'bar', baz: 'wiz' });
 		expect(count).to.equal(1);
+	});
+
+	it('should watch non-object/array properties of a gawk object', () => {
+		const gobj = new GawkObject({ foo: { bar: [1, 2, 3] } });
+		let count = 0;
+
+		gawk.watch(gobj, ['foo', 'baz'], obj => {
+			count++;
+		});
+
+		gawk.mergeDeep(gobj, { foo: { bar: [4, 5, 6] } });
+		expect(count).to.equal(0);
+
+		gawk.mergeDeep(gobj, { foo: { baz: 'pow' } });
+		expect(count).to.equal(1);
+
+		gawk.mergeDeep(gobj, { foo: { bar: 'bam' } });
+		expect(count).to.equal(1);
+
+		gawk.mergeDeep(gobj, { foo: { baz: 'zip' } });
+		expect(count).to.equal(2);
+
+		delete gobj.foo.baz;
+		expect(count).to.equal(3);
+
+		gobj.foo.baz = 'zap';
+		expect(count).to.equal(4);
 	});
 });
 

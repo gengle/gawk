@@ -31,9 +31,9 @@ const obj = gawk({
     foo: 'bar'
 });
 
-gawk.watch(obj, target => {
+gawk.watch(obj, (obj, src) => {
     console.info('object changed!');
-    console.info('new value =', target);
+    console.info('new value =', obj);
 });
 
 obj.foo = 'baz';
@@ -50,9 +50,9 @@ const obj = gawk({
     }
 });
 
-gawk.watch(obj, target => {
+gawk.watch(obj, (obj, src) => {
     console.info('object changed!');
-    console.info('new value =', target);
+    console.info('new value =', obj);
 });
 
 obj.foo.bar.push('c', 'd');
@@ -60,7 +60,24 @@ obj.foo.bar.push('c', 'd');
 console.info(obj); // { foo: { bar: ['a', 'b', 'c', 'd'] } }
 ```
 
-You can also directly create `GawkObject` and `GawkArray` objects:
+To filter watch notifications, simply pass in the property name or array of
+property names used to filter the gawk object.
+
+```javascript
+const obj = gawk({
+	foo: {
+		bar: 'hello'
+	}
+});
+
+gawk.watch(obj, [ 'foo', 'bar' ], (obj, src) => {
+	console.info('bar changed!');
+});
+
+obj.foo.bar = 'world!';
+```
+
+You can directly create `GawkObject` and `GawkArray` objects:
 
 ```javascript
 import { GawkArray, GawkObject } from 'gawk';

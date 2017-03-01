@@ -64,7 +64,9 @@ function gawkify(instance) {
 			 * A list of listener functions call invoke when a change occurs.
 			 * @type {Set}
 			 */
-			listeners: new Set,
+			listeners: new Map,
+
+			lastValues: new WeakMap,
 
 			/**
 			 * A list of child objects that are modified while paused.
@@ -89,8 +91,8 @@ function gawkify(instance) {
 				if (internal.queue) {
 					const queue = internal.queue;
 					internal.queue = null;
-					for (const item of queue) {
-						internal.notify(item);
+					for (const instance of queue) {
+						internal.notify(instance);
 					}
 				}
 			},
@@ -108,8 +110,27 @@ function gawkify(instance) {
 				}
 
 				// notify all of this object's listeners
-				for (const listener of internal.listeners) {
-					listener(instance, source);
+				for (const [ listener, filter ] of internal.listeners) {
+					if (filter) {
+						let obj = instance;
+						let found = true;
+
+						for (let i = 0, len = filter.length; obj && typeof obj === 'object' && i < len; i++) {
+							if (!obj.hasOwnProperty(filter[i])) {
+								found = false;
+								break;
+							}
+							obj = obj[filter[i]];
+						}
+
+						if ((found || internal.lastValues.has(listener)) && internal.lastValues.get(listener) !== obj) {
+							listener(instance, source);
+						}
+
+						internal.lastValues.set(listener, obj);
+					} else {
+						listener(instance, source);
+					}
 				}
 
 				// notify all of this object's parents
@@ -300,8 +321,9 @@ export class GawkObject {
 				const changed = !target.hasOwnProperty(prop) || target[prop] !== value;
 				delete target[prop];
 				target[prop] = gawk(value, instance);
+
 				if (changed) {
-					target.__gawk__.notify();
+					target.__gawk__.notify(target);
 				}
 
 				return true;
@@ -312,7 +334,7 @@ export class GawkObject {
 					throw new Error('"__gawk__" is read-only');
 				}
 
-				// console.log('DELETING ' + prop);
+				console.log('DELETING ' + prop);
 
 				const value = target[prop];
 				if (value instanceof GawkArray || value instanceof GawkObject) {
@@ -340,8 +362,8 @@ export class GawkObject {
 
 			// copy all listeners too
 			if (obj instanceof GawkObject) {
-				for (const w of obj.__gawk__.listeners) {
-					this.__gawk__.listeners.add(w);
+				for (const [ listener, filter ] of obj.__gawk__.listeners) {
+					this.__gawk__.listeners.set(listener, filter);
 				}
 			}
 		}
@@ -351,40 +373,41 @@ export class GawkObject {
 }
 
 /**
- * Internal helper to perform validation and add/remove a listener.
+ * Adds a listener to be called when the specified object or any of its
+ * properties/elements are changed.
  *
- * @param {String} action - Must be either "add" or "delete".
- * @param {GawkArray|GawkObject} subject - The gawk object the listener is being
- * added to or removed from.
- * @param {Function} listener - The listener function to add or remove.
+ * @param {Object|GawkObject|Array|GawkArray} subject - The object to watch.
+ * @param {String|Array.<String>} [filter] - A property name or array of nested
+ * properties to watch.
+ * @param {Function} listener - The function to call when something changes.
  * @returns {GawkObject|GawkArray} Returns a gawked object or array depending on
  * the input object.
  */
-function handleWatchUnwatch(action, subject, listener) {
+gawk.watch = function watch(subject, filter, listener) {
 	if (!(subject instanceof GawkArray) && !(subject instanceof GawkObject)) {
 		throw new TypeError('Expected source to be a GawkArray or GawkObject');
+	}
+
+	if (typeof filter === 'function') {
+		listener = filter;
+		filter = null;
+	}
+
+	if (filter) {
+		if (typeof filter === 'string') {
+			filter = [ filter ];
+		} else if (!Array.isArray(filter)) {
+			throw new TypeError('Expected filter to be a stirng or array of strings');
+		}
 	}
 
 	if (typeof listener !== 'function') {
 		throw new TypeError('Expected listener to be a function');
 	}
 
-	subject.__gawk__.listeners[action](listener);
+	subject.__gawk__.listeners.set(listener, filter);
 
 	return subject;
-}
-
-/**
- * Adds a listener to be called when the specified object or any of its
- * properties/elements are changed.
- *
- * @param {Object|GawkObject|Array|GawkArray} subject - The object to watch.
- * @param {Function} listener - The function to call when something changes.
- * @returns {GawkObject|GawkArray} Returns a gawked object or array depending on
- * the input object.
- */
-gawk.watch = function watch(subject, listener) {
-	return handleWatchUnwatch('add', gawk(subject), listener);
 };
 
 /**
@@ -396,7 +419,18 @@ gawk.watch = function watch(subject, listener) {
  * the input object.
  */
 gawk.unwatch = function unwatch(subject, listener) {
-	return handleWatchUnwatch('delete', subject, listener);
+	if (!(subject instanceof GawkArray) && !(subject instanceof GawkObject)) {
+		throw new TypeError('Expected source to be a GawkArray or GawkObject');
+	}
+
+	if (typeof listener !== 'function') {
+		throw new TypeError('Expected listener to be a function');
+	}
+
+	subject.__gawk__.listeners.delete(listener);
+	subject.__gawk__.lastValues.delete(listener);
+
+	return subject;
 };
 
 /**

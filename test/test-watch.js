@@ -547,10 +547,6 @@ describe('gawk.unwatch()', () => {
 
 	it('should fail to unwatch with non-function listener', () => {
 		expect(() => {
-			gawk.unwatch(gawk({}));
-		}).to.throw(TypeError, 'Expected listener to be a function');
-
-		expect(() => {
 			gawk.unwatch(gawk({}), 'foo');
 		}).to.throw(TypeError, 'Expected listener to be a function');
 	});
@@ -573,6 +569,29 @@ describe('gawk.unwatch()', () => {
 		gobj.g = 'h';
 
 		expect(count).to.equal(2);
+	});
+
+	it('should unwatch all listeners', () => {
+		const gobj = gawk({});
+		let count = 0;
+
+		gawk.watch(gobj, () => {
+			count++;
+		});
+
+		gawk.watch(gobj, () => {
+			count++;
+		});
+
+		gobj.a = 'b';
+		gobj.c = 'd';
+
+		gawk.unwatch(gobj);
+
+		gobj.e = 'f';
+		gobj.g = 'h';
+
+		expect(count).to.equal(4);
 	});
 
 	it('should unwatch GawkArray changes', () => {

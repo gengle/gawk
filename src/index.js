@@ -432,7 +432,7 @@ gawk.watch = function watch(subject, filter, listener) {
  * Removes a listener from the specified gawked object.
  *
  * @param {Object|GawkObject|Array|GawkArray} subject - The object to unwatch.
- * @param {Function} listener - The function to call when something changes.
+ * @param {Function} [listener] - The function to call when something changes.
  * @returns {GawkObject|GawkArray} Returns a gawked object or array depending on
  * the input object.
  */
@@ -441,12 +441,19 @@ gawk.unwatch = function unwatch(subject, listener) {
 		throw new TypeError('Expected source to be a GawkArray or GawkObject');
 	}
 
-	if (typeof listener !== 'function') {
-		throw new TypeError('Expected listener to be a function');
+	if (listener) {
+		if (typeof listener !== 'function') {
+			throw new TypeError('Expected listener to be a function');
+		}
+		subject.__gawk__.listeners.delete(listener);
+		subject.__gawk__.previous.delete(listener);
+	} else {
+		// remove all listeners
+		for (const [ listener, filter ] of subject.__gawk__.listeners) {
+			subject.__gawk__.listeners.delete(listener);
+			subject.__gawk__.previous.delete(listener);
+		}
 	}
-
-	subject.__gawk__.listeners.delete(listener);
-	subject.__gawk__.previous.delete(listener);
 
 	return subject;
 };

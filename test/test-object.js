@@ -100,6 +100,12 @@ describe('GawkObject', () => {
 			const gobj = new GawkObject(gawk(obj));
 			expect(gobj).to.deep.equal(obj);
 		});
+
+		it('should not clobber date objects', () => {
+			const dt = new Date;
+			const gobj = new GawkObject({ dt });
+			expect(gobj.dt).to.equal(dt);
+		});
 	});
 
 	describe('toString()', () => {

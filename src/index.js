@@ -14,7 +14,7 @@ export default function gawk(value, parent) {
 		throw new TypeError('Expected parent to be a GawkArray or GawkObject');
 	}
 
-	if (!value || typeof value !== 'object') {
+	if (!value || typeof value !== 'object' || value instanceof Date) {
 		return value;
 	}
 

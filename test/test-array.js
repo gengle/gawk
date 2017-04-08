@@ -230,6 +230,12 @@ describe('push()', () => {
 
 		expect(garr[0]).to.be.instanceOf(EventEmitter);
 		expect(garr[0].on).to.be.a.Function;
+
+		const callback = sinon.spy();
+		garr[0].on('foo', callback);
+
+		emitter.emit('foo');
+		expect(callback).to.be.calledOnce;
 	});
 });
 

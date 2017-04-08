@@ -165,7 +165,7 @@ export default function gawk(value, parent) {
 
 				let changed = true;
 
-				if (target.hasOwnProperty(prop)) {
+				if (Object.prototype.hasOwnProperty.call(target, prop)) {
 					changed = target[prop] !== value;
 					if (isGawked(target[prop])) {
 						target[prop].__gawk__.parents.delete(gawked);

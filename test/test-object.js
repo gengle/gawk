@@ -2,12 +2,15 @@ import gawk, { Gawk, isGawked } from '../src/index';
 
 import { EventEmitter } from 'events';
 
+const version = require('./../package.json').version;
+
 describe('gawk() object', () => {
 	it('should gawk empty object', () => {
 		const obj = {};
 		const gobj = gawk(obj);
 		expect(isGawked(gobj)).to.be.true;
 		expect(gobj).to.deep.equal(obj);
+		expect(gobj.__gawk__.version).to.equal(version);
 	});
 
 	it('should passhthrough non-object values', () => {

@@ -2,121 +2,9 @@ if (!Error.prepareStackTrace) {
 	require('source-map-support/register');
 }
 
-export class Gawk {
-	/**
-	 * A list of all the gawk object's parents. These parents are notified when a change occurs.
-	 * @type {Set}
-	 */
-	parents = new Set;
+import fs from 'fs';
 
-	/**
-	 * A map of listener functions to call invoke when a change occurs. The associated key value is
-	 * the optional filter to apply to the listener.
-	 * @type {Map}
-	 */
-	listeners = new Map;
-
-	/**
-	 * A map of listener functions to the last known hash of the stringified value. This is used to
-	 * detect if a filtered watch should be notified.
-	 * @type {WeakMap}
-	 */
-	previous = new WeakMap;
-
-	/**
-	 * A list of child objects that are modified while paused.
-	 * @type {Set}
-	 */
-	queue = null;
-
-	/**
-	 * Creates the internal Gawk state.
-	 *
-	 * @param {Object} instance - The object being gawked.
-	 */
-	constructor(instance) {
-		this.instance = instance;
-	}
-
-	/**
-	 * Dispatches change notifications to the listeners.
-	 */
-	pause() {
-		if (!this.queue) {
-			this.queue = new Set;
-		}
-	}
-
-	/**
-	 * Unpauses the gawk notifications and sends out any pending notifications.
-	 */
-	resume() {
-		if (this.queue) {
-			const queue = this.queue;
-			this.queue = null;
-			for (const instance of queue) {
-				this.notify(instance);
-			}
-		}
-	}
-
-	/**
-	 * Dispatches change notifications to the listeners.
-	 *
-	 * @param {Object|Array} [source] - The gawk object that was modified.
-	 */
-	notify(source) {
-		if (source === undefined) {
-			source = this.instance;
-		}
-
-		if (this.queue) {
-			this.queue.add(this.instance);
-			return;
-		}
-
-		// notify all of this object's listeners
-		for (const [ listener, filter ] of this.listeners) {
-			if (filter) {
-				let obj = this.instance;
-				let found = true;
-
-				// find the value we're interested in
-				for (let i = 0, len = filter.length; obj && typeof obj === 'object' && i < len; i++) {
-					if (!obj.hasOwnProperty(filter[i])) {
-						found = false;
-						obj = undefined;
-						break;
-					}
-					obj = obj[filter[i]];
-				}
-
-				// compute the hash of the stringified value
-				const str = JSON.stringify(obj) || '';
-				let hash = 5381;
-				let i = str.length;
-				while (i) {
-					hash = (hash * 33) ^ str.charCodeAt(--i);
-				}
-				hash = hash >>> 0;
-
-				// check if the value changed
-				if ((found || this.previous.has(listener)) && hash !== this.previous.get(listener)) {
-					listener(obj, source);
-				}
-
-				this.previous.set(listener, hash);
-			} else {
-				listener(this.instance, source);
-			}
-		}
-
-		// notify all of this object's parents
-		for (const parent of this.parents) {
-			parent.__gawk__.notify(source);
-		}
-	}
-}
+const version = JSON.parse(fs.readFileSync(`${__dirname}/../package.json`, 'utf-8')).version;
 
 /**
  * Determines if the specified variable is gawked.
@@ -125,7 +13,7 @@ export class Gawk {
  * @returns {Boolean}
  */
 export function isGawked(it) {
-	return it && typeof it === 'object' && it.__gawk__ instanceof Gawk;
+	return !!(it && typeof it === 'object' && it.__gawk__ && typeof it.__gawk__ === 'object');
 }
 
 /**
@@ -136,7 +24,7 @@ export function isGawked(it) {
  * @returns {Array|Object|*}
  */
 export default function gawk(value, parent) {
-	if (parent !== undefined && (typeof parent !== 'object' || !(parent.__gawk__ instanceof Gawk))) {
+	if (parent !== undefined && !isGawked(parent)) {
 		throw new TypeError('Expected parent to be gawked');
 	}
 
@@ -147,7 +35,7 @@ export default function gawk(value, parent) {
 
 	let gawked;
 
-	if (value.__gawk__ instanceof Gawk) {
+	if (typeof value.__gawk__ === 'object') {
 		// already gawked
 		if (value === parent) {
 			throw new Error('The parent must not be the same object as the value');
@@ -210,7 +98,120 @@ export default function gawk(value, parent) {
 		});
 
 		Object.defineProperty(gawked, '__gawk__', {
-			value: new Gawk(gawked)
+			value: {
+				/**
+				 * A map of listener functions to call invoke when a change occurs. The associated
+				 * key value is the optional filter to apply to the listener.
+				 * @type {Map}
+				 */
+				listeners: new Map,
+
+				/**
+				 * A list of all the gawk object's parents. These parents are notified when a change
+				 * occurs.
+				 * @type {Set}
+				 */
+				parents: new Set,
+
+				/**
+				 * A map of listener functions to the last known hash of the stringified value. This
+				 * is used to detect if a filtered watch should be notified.
+				 * @type {WeakMap}
+				 */
+				previous: new WeakMap,
+
+				/**
+				 * A list of child objects that are modified while paused.
+				 * @type {Set}
+				 */
+				queue: null,
+
+				/**
+				 * The Gawk version. This is helpful for identifying the revision of this internal
+				 * structure.
+				 * @type {String}
+				 */
+				version,
+
+				/**
+				 * Dispatches change notifications to the listeners.
+				 *
+				 * @param {Object|Array} [source] - The gawk object that was modified.
+				 */
+				notify: function notify(source) {
+					if (source === undefined) {
+						source = gawked;
+					}
+
+					if (this.queue) {
+						this.queue.add(gawked);
+						return;
+					}
+
+					// notify all of this object's listeners
+					for (const [ listener, filter ] of this.listeners) {
+						if (filter) {
+							let obj = gawked;
+							let found = true;
+
+							// find the value we're interested in
+							for (let i = 0, len = filter.length; obj && typeof obj === 'object' && i < len; i++) {
+								if (!obj.hasOwnProperty(filter[i])) {
+									found = false;
+									obj = undefined;
+									break;
+								}
+								obj = obj[filter[i]];
+							}
+
+							// compute the hash of the stringified value
+							const str = JSON.stringify(obj) || '';
+							let hash = 5381;
+							let i = str.length;
+							while (i) {
+								hash = (hash * 33) ^ str.charCodeAt(--i);
+							}
+							hash = hash >>> 0;
+
+							// check if the value changed
+							if ((found || this.previous.has(listener)) && hash !== this.previous.get(listener)) {
+								listener(obj, source);
+							}
+
+							this.previous.set(listener, hash);
+						} else {
+							listener(gawked, source);
+						}
+					}
+
+					// notify all of this object's parents
+					for (const parent of this.parents) {
+						parent.__gawk__.notify(source);
+					}
+				},
+
+				/**
+				 * Dispatches change notifications to the listeners.
+				 */
+				pause: function pause() {
+					if (!this.queue) {
+						this.queue = new Set;
+					}
+				},
+
+				/**
+				 * Unpauses the gawk notifications and sends out any pending notifications.
+				 */
+				resume: function resume() {
+					if (this.queue) {
+						const queue = this.queue;
+						this.queue = null;
+						for (const instance of queue) {
+							this.notify(instance);
+						}
+					}
+				}
+			}
 		});
 
 		// gawk any object properties

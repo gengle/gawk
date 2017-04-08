@@ -1,6 +1,6 @@
 {
   "name": "gawk",
-  "version": "3.4.0",
+  "version": "4.0.0",
   "description": "Observable JavaScript object model",
   "main": "./dist/index.js",
   "author": "Chris Barber <chris@cb1inc.com> (https://github.com/cb1kenobi)",
@@ -27,10 +27,10 @@
   },
   "devDependencies": {
     "babel-eslint": "^7.2.1",
-    "babel-plugin-transform-es2015-modules-commonjs": "^6.24.0",
+    "babel-plugin-transform-class-properties": "^6.24.1",
+    "babel-plugin-transform-es2015-modules-commonjs": "^6.24.1",
     "chai": "^3.5.0",
-    "codeclimate-test-reporter": "^0.4.1",
-    "coveralls": "^2.12.0",
+    "coveralls": "^2.13.0",
     "del": "^2.2.2",
     "esdoc-es7-plugin": "^0.0.3",
     "gulp": "^3.9.1",
@@ -44,7 +44,7 @@
     "gulp-load-plugins": "^1.5.0",
     "gulp-mocha": "^3.0.1",
     "gulp-plumber": "^1.1.0",
-    "gulp-sourcemaps": "^2.4.1",
+    "gulp-sourcemaps": "^2.5.1",
     "sinon": "^2.1.0",
     "sinon-chai": "^2.9.0"
   },

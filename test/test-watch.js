@@ -1,95 +1,102 @@
-import gawk, { GawkArray, GawkObject } from '../src/index';
+import gawk, { isGawked } from '../src/index';
 
 describe('gawk.watch()', () => {
 	it('should fail to watch with non-gawk or object type', () => {
 		expect(() => {
 			gawk.watch('foo');
-		}).to.throw(TypeError, 'Expected source to be a GawkArray or GawkObject');
+		}).to.throw(TypeError, 'Expected subject to be gawked');
 	});
 
 	it('should fail to watch with invalid filter', () => {
 		expect(() => {
-			gawk.watch(new GawkObject, 123);
-		}).to.throw(TypeError, 'Expected filter to be a stirng or array of strings');
+			gawk.watch(gawk({}), 123);
+		}).to.throw(TypeError, 'Expected filter to be a string or array of strings');
 	});
 
 	it('should fail to watch with non-function listener', () => {
 		expect(() => {
-			gawk.watch(new GawkObject);
+			gawk.watch(gawk({}));
 		}).to.throw(TypeError, 'Expected listener to be a function');
 
 		expect(() => {
-			gawk.watch(new GawkObject, 'foo', 'bar');
+			gawk.watch(gawk({}), 'foo', 'bar');
 		}).to.throw(TypeError, 'Expected listener to be a function');
 	});
 
 	it('should be notified after merge', () => {
 		const gobj = gawk({ foo: 'bar' });
-		gawk.watch(gobj, obj => {
+		const callback = sinon.spy(obj => {
 			expect(obj).to.equal(gobj);
 			expect(obj).to.deep.equal({ foo: 'bar', bar: 'wiz' });
 		});
+		gawk.watch(gobj, callback);
 		gawk.merge(gobj, { bar: 'wiz' });
+		expect(callback).to.be.calledOnce;
 	});
 
 	it('should be notified when a key/value is added', () => {
 		const gobj = gawk({ foo: 'bar' });
-		gawk.watch(gobj, obj => {
+		const callback = sinon.spy(obj => {
 			expect(obj).to.equal(gobj);
 			expect(obj).to.deep.equal({ foo: 'bar', pi: 3.14 });
 		});
+		gawk.watch(gobj, callback);
 		gobj.pi = 3.14;
+		expect(callback).to.be.calledOnce;
 	});
 
 	it('should be notified when a key/value changes', () => {
 		const gobj = gawk({ foo: 'bar' });
-		gawk.watch(gobj, obj => {
+		const callback = sinon.spy(obj => {
 			expect(obj).to.equal(gobj);
 			expect(obj).to.deep.equal({ foo: 'wiz' });
 		});
+		gawk.watch(gobj, callback);
 		gobj.foo = 'wiz';
+		expect(callback).to.be.calledOnce;
 	});
 
 	it('should be notified when a key/value is deleted', () => {
 		const gobj = gawk({ foo: 'bar', pi: 3.14 });
-		gawk.watch(gobj, obj => {
+		const callback = sinon.spy(obj => {
 			expect(obj).to.equal(gobj);
 			expect(obj).to.deep.equal({ foo: 'bar' });
 		});
+		gawk.watch(gobj, callback);
 		delete gobj.pi;
+		expect(callback).to.be.calledOnce;
 	});
 
 	it('should not notify when a non-existent key/value is deleted', () => {
 		const gobj = gawk({});
-		gawk.watch(gobj, obj => {
-			throw new Error('Listener should not have been invoked');
-		});
+		const callback = sinon.spy();
+		gawk.watch(gobj, callback);
 		delete gobj.foo;
+		expect(callback).to.be.notCalled;
 	});
 
 	it('should only notify if key/value is uniquely changed', () => {
 		const gobj = gawk({ foo: 'bar' });
-		let count = 0;
+		const callback = sinon.spy();
 
-		gawk.watch(gobj, obj => {
-			count++;
-		});
-
-		gobj.foo = 'baz';
-		expect(count).to.equal(1);
+		gawk.watch(gobj, callback);
+		expect(callback).to.be.notCalled;
 
 		gobj.foo = 'baz';
-		expect(count).to.equal(1);
+		expect(callback).to.be.calledOnce;
+
+		gobj.foo = 'baz';
+		expect(callback).to.be.calledOnce;
 	});
 
 	it('should be notified when child changes', () => {
 		const gobj = gawk({ foo: { bar: 'baz' } });
 		const nested = gobj.foo;
 
-		expect(nested).to.be.instanceof(GawkObject);
+		expect(isGawked(nested)).to.be.true;
 		expect(nested.__gawk__.parents.has(gobj)).to.be.true;
 
-		gawk.watch(gobj, (obj, source) => {
+		const callback = sinon.spy((obj, source) => {
 			expect(obj).to.equal(gobj);
 			expect(obj).to.deep.equal({
 				foo: {
@@ -103,63 +110,59 @@ describe('gawk.watch()', () => {
 			});
 		});
 
+		gawk.watch(gobj, callback);
+
 		nested.pi = 3.14;
+
+		expect(callback).to.be.calledOnce;
 	});
 
 	it('should notify child watchers if child changes', () => {
 		const gobj = gawk({ foo: { bar: 'baz' } });
-		let count = 0;
+		const callback = sinon.spy();
 
-		gawk.watch(gobj.foo, (obj, source) => {
-			count++;
-		});
+		gawk.watch(gobj.foo, callback);
 
 		gawk.mergeDeep(gobj, { foo: { bar: 'baz' + Date.now() } });
 
-		expect(count).to.equal(1);
+		expect(callback).to.be.calledOnce;
 	});
 
 	it('should be notified when array changes by merge', () => {
-		let count = 0;
 		const gobj = gawk({ foo: [] });
+		const callback = sinon.spy();
 
-		gawk.watch(gobj.foo, obj => {
-			count++;
-		});
+		gawk.watch(gobj.foo, callback);
 
 		gawk.mergeDeep(gobj, { foo: [1, 2, 3] });
-		expect(count).to.equal(1);
+		expect(callback).to.be.calledOnce;
 		expect(gobj).to.deep.equal({ foo: [1, 2, 3] });
 
 		gawk.mergeDeep(gobj, { foo: [4, 5, 6] });
-		expect(count).to.equal(2);
+		expect(callback).to.be.calledTwice;
 		expect(gobj).to.deep.equal({ foo: [4, 5, 6] });
 	});
 
 	it('should be notified when array changes by deep merge', () => {
-		let count = 0;
 		const gobj = gawk({ foo: { bar: [] } });
+		const callback = sinon.spy();
 
-		gawk.watch(gobj.foo, obj => {
-			count++;
-		});
+		gawk.watch(gobj.foo, callback);
 
 		gawk.mergeDeep(gobj, { foo: { bar: [1, 2, 3] } });
-		expect(count).to.equal(1);
+		expect(callback).to.be.calledOnce;
 		expect(gobj).to.deep.equal({ foo: { bar: [1, 2, 3] } });
 
 		gawk.mergeDeep(gobj, { foo: { bar: [4, 5, 6] } });
-		expect(count).to.equal(2);
+		expect(callback).to.be.calledTwice;
 		expect(gobj).to.deep.equal({ foo: { bar: [4, 5, 6] } });
 	});
 
 	it('should only notify once after deep merge', () => {
-		const gobj = new GawkObject;
-		let counter = 0;
+		const gobj = gawk({});
+		const callback = sinon.spy();
 
-		gawk.watch(gobj, obj => {
-			counter++;
-		});
+		gawk.watch(gobj, callback);
 
 		gawk.mergeDeep(gobj, {
 			foo: {
@@ -213,7 +216,7 @@ describe('gawk.watch()', () => {
 			}
 		});
 
-		expect(counter).to.equal(2);
+		expect(callback).to.be.calledTwice;
 	});
 
 	it('should be notified when deep child changes', () => {
@@ -223,21 +226,19 @@ describe('gawk.watch()', () => {
 		gobj.foo.bar.baz = [];
 		const arr = gobj.foo.bar.baz;
 
-		let count = 0;
-		gawk.watch(gobj, obj => {
-			count++;
-		});
+		const callback = sinon.spy();
+		gawk.watch(gobj, callback);
 
 		arr.push('a');
 		arr.push('b');
-		expect(count).to.equal(2);
+		expect(callback).to.be.calledTwice;
 	});
 
 	it('should notify multiple parents', () => {
 		const gobjs = [
-			new GawkObject,
-			new GawkObject,
-			new GawkObject
+			gawk({}),
+			gawk({}),
+			gawk({})
 		];
 		const child = gawk({});
 		child.bar = [];
@@ -261,50 +262,46 @@ describe('gawk.watch()', () => {
 
 	it('should pause and resume notifications', () => {
 		const gobj = gawk({ foo: 'bar' });
-		let counter = 0;
+		const callback = sinon.spy();
 
-		gawk.watch(gobj, obj => {
-			counter++;
-		});
+		gawk.watch(gobj, callback);
 
 		gobj.pi = 3.14;
-		expect(counter).to.equal(1);
+		expect(callback).to.be.calledOnce;
 
-		const gobj2 = new GawkObject({ wiz: 123 });
+		const gobj2 = gawk({ wiz: 123 });
 
 		gobj.__gawk__.pause();
 		gobj.baz = gobj2;
-		expect(counter).to.equal(1);
+		expect(callback).to.be.calledOnce;
 		gobj.__gawk__.resume();
-		expect(counter).to.equal(2);
+		expect(callback).to.be.calledTwice;
 
 		gobj.__gawk__.pause();
 		gobj.color = 'red';
-		expect(counter).to.equal(2);
+		expect(callback).to.be.calledTwice;
 		gobj2.lorum = 'ipsum';
-		expect(counter).to.equal(2);
+		expect(callback).to.be.calledTwice;
 		gobj.__gawk__.resume();
-		expect(counter).to.equal(3);
+		expect(callback).to.be.calledThrice;
 	});
 
 	it('should notify parent when child has a merge', () => {
 		const gobj = gawk({});
-		let count = 0;
+		const callback = sinon.spy();
 
-		gawk.watch(gobj, obj => {
-			count++;
-		});
+		gawk.watch(gobj, callback);
 
 		const child = gawk({});
 		gobj.foo = child;
 		// { foo: {} }
-		expect(count).to.equal(1);
+		expect(callback).to.be.calledOnce;
 		expect(child.__gawk__.parents.has(gobj)).to.be.true;
 
 		const bar = gawk({ bar: 'wiz' });
 		gawk.merge(child, bar);
 		// { foo: { bar: 'wiz' } }
-		expect(count).to.equal(2);
+		expect(callback).to.be.calledTwice;
 		expect(bar.__gawk__.parents.has(child)).to.be.false;
 
 		const foo = gobj.foo;
@@ -312,7 +309,7 @@ describe('gawk.watch()', () => {
 
 		gawk.merge(child, { bar: 'wow' });
 		// { foo: { bar: 'wow' } }
-		expect(count).to.equal(3);
+		expect(callback).to.be.calledThrice;
 		expect(bar.__gawk__.parents.has(child)).to.be.false;
 		expect(child.__gawk__.parents.has(gobj)).to.be.true;
 
@@ -321,41 +318,37 @@ describe('gawk.watch()', () => {
 
 	it('should only notify parent one time when merging multiple objects', () => {
 		const gobj = gawk({ foo: 'bar' });
-		let count = 0;
+		const callback = sinon.spy();
 
-		gawk.watch(gobj, obj => {
-			count++;
-		});
+		gawk.watch(gobj, callback);
 
 		gawk.merge(gobj, { baz: 'wiz' }, gawk({ pi: 3.14 })); //, { num: 123 }, gawk({ arr: ['a', 'b'] }));
 		expect(gobj).to.deep.equal({ foo: 'bar', baz: 'wiz', pi: 3.14 }); //, num: 123, arr: ['a', 'b'] });
-		expect(count).to.equal(1);
+		expect(callback).to.be.calledOnce;
 	});
 
 	it('should notify parent one time when child has a deep merge', () => {
 		const gobj = gawk({});
-		let count = 0;
+		const callback = sinon.spy();
 
-		gawk.watch(gobj, obj => {
-			count++;
-		});
+		gawk.watch(gobj, callback);
 
 		const child = gawk({ bar: { pow: 123 } });
 		gobj.foo = child;
 		// { foo: { bar: { pow: 123 } } }
-		expect(count).to.equal(1);
+		expect(callback).to.be.calledOnce;
 
 		const bar = gawk({ bar: { wiz: 456 } });
 		gawk.mergeDeep(child, bar);
 		// { foo: { bar: { pow: 123, wiz: 456 } } }
-		expect(count).to.equal(2);
+		expect(callback).to.be.calledTwice;
 
 		const foo = gobj.foo;
 		expect(foo.__gawk__.parents.has(gobj)).to.be.true;
 
 		gawk.mergeDeep(child, { bar: { paz: 789 } });
 		// { foo: { bar: { pow: 123, wiz: 456, paz: 789 } } }
-		expect(count).to.equal(3);
+		expect(callback).to.be.calledThrice;
 		expect(bar.__gawk__.parents.has(child)).to.be.false;
 
 		expect(gobj).to.deep.equal({ foo: { bar: { pow: 123, wiz: 456, paz: 789 } } });
@@ -363,55 +356,49 @@ describe('gawk.watch()', () => {
 
 	it('should only notify parent one time when merging multiple objects', () => {
 		const gobj = gawk({ foo: { bar: { baz: 'wiz' } } });
-		let count = 0;
+		const callback = sinon.spy();
 
-		gawk.watch(gobj, obj => {
-			count++;
-		});
+		gawk.watch(gobj, callback);
 
 		gawk.mergeDeep(gobj, { foo: { bar: { baz: 'wow' } } });
 		expect(gobj).to.deep.equal({ foo: { bar: { baz: 'wow' } } });
-		expect(count).to.equal(1);
+		expect(callback).to.be.calledOnce;
 	});
 
 	it('should only notify if value is uniquely changed', () => {
 		const garr = gawk(['a']);
-		let count = 0;
+		const callback = sinon.spy();
 
-		gawk.watch(garr, obj => {
-			count++;
-		});
+		gawk.watch(garr, callback);
 
 		garr.push('b');
-		expect(count).to.equal(1);
+		expect(callback).to.be.calledOnce;
 
 		garr[1] = 'b';
-		expect(count).to.equal(1);
+		expect(callback).to.be.calledOnce;
 
 		garr[1] = 'c';
-		expect(count).to.equal(2);
+		expect(callback).to.be.calledTwice;
 	});
 
 	it('should be notified when array changes', () => {
-		let count = 0;
 		const gobj = gawk(['a', 'b']);
+		const callback = sinon.spy();
 
-		gawk.watch(gobj, obj => {
-			count++;
-		});
+		gawk.watch(gobj, callback);
 
 		gobj.push('c');
 		gobj.pop();
 		gobj.unshift('d');
 		gobj.shift();
 
-		expect(count).to.equal(4);
+		expect(callback).to.have.callCount(4);
 	});
 
 	it('should be notified when deeply nested children change', () => {
-		let count1 = 0;
-		let count2 = 0;
-		let count3 = 0;
+		const callback1 = sinon.spy();
+		const callback2 = sinon.spy();
+		const callback3 = sinon.spy();
 
 		const arr1 = gawk([]);
 		const arr2 = gawk([]);
@@ -423,23 +410,15 @@ describe('gawk.watch()', () => {
 		expect(arr2.__gawk__.parents.has(arr1)).to.be.true;
 		expect(arr3.__gawk__.parents.has(arr2)).to.be.true;
 
-		gawk.watch(arr1, obj => {
-			count1++;
-		});
-
-		gawk.watch(arr2, obj => {
-			count2++;
-		});
-
-		gawk.watch(arr3, obj => {
-			count3++;
-		});
+		gawk.watch(arr1, callback1);
+		gawk.watch(arr2, callback2);
+		gawk.watch(arr3, callback3);
 
 		arr3.push('foo');
 
-		expect(count1).to.equal(1);
-		expect(count2).to.equal(1);
-		expect(count3).to.equal(1);
+		expect(callback1).to.be.calledOnce;
+		expect(callback2).to.be.calledOnce;
+		expect(callback3).to.be.calledOnce;
 
 		expect(arr3.length).to.equal(1);
 		expect(arr3).to.deep.equal(['foo']);
@@ -453,52 +432,46 @@ describe('gawk.watch()', () => {
 
 	it('should notify parent if property is deleted', () => {
 		const gobj = gawk({ foo: { bar: 'baz' } });
+		const callback = sinon.spy();
 
-		let count = 0;
-		gawk.watch(gobj, obj => {
-			count++;
-		});
+		gawk.watch(gobj, callback);
 
 		expect(gobj).to.deep.equal({ foo: { bar: 'baz' } });
 		delete gobj.foo;
 		expect(gobj).to.deep.equal({});
 
-		expect(count).to.equal(1);
+		expect(callback).to.be.calledOnce;
 	});
 
 	it('should notify parent if index is deleted', () => {
 		const gobj = gawk({ foo: { bar: [ 'baz' ] } });
+		const callback = sinon.spy();
 
-		let count = 0;
-		gawk.watch(gobj, obj => {
-			count++;
-		});
+		gawk.watch(gobj, callback);
 
 		expect(gobj).to.deep.equal({ foo: { bar: [ 'baz' ] } });
 		delete gobj.foo.bar[0];
 		expect(gobj).to.deep.equal({ foo: { bar: [] } });
 
-		expect(count).to.equal(1);
+		expect(callback).to.be.calledOnce;
 	});
 
 	it('should copy listeners from another gawk object', () => {
 		const gobj = gawk({ foo: 'bar' });
+		const callback = sinon.spy();
 
-		let count = 0;
-		gawk.watch(gobj, obj => {
-			count++;
-		});
+		gawk.watch(gobj, callback);
 
-		const gobj2 = new GawkObject(gobj);
+		const gobj2 = gawk(gobj);
 		expect(gobj2).to.deep.equal({ foo: 'bar' });
 
 		gobj2.baz = 'wiz';
 		expect(gobj2).to.deep.equal({ foo: 'bar', baz: 'wiz' });
-		expect(count).to.equal(1);
+		expect(callback).to.be.calledOnce;
 	});
 
 	it('should watch non-object/array properties of a gawk object', () => {
-		const gobj = new GawkObject({ foo: { bar: [1, 2, 3] } });
+		const gobj = gawk({ foo: { bar: [1, 2, 3] } });
 		let count = 0;
 
 		gawk.watch(gobj, ['foo', 'baz'], obj => {
@@ -538,11 +511,11 @@ describe('gawk.unwatch()', () => {
 	it('should fail to unwatch with non-gawk or object type', () => {
 		expect(() => {
 			gawk.unwatch('foo');
-		}).to.throw(TypeError, 'Expected source to be a GawkArray or GawkObject');
+		}).to.throw(TypeError, 'Expected subject to be gawked');
 
 		expect(() => {
 			gawk.unwatch({});
-		}).to.throw(TypeError, 'Expected source to be a GawkArray or GawkObject');
+		}).to.throw(TypeError, 'Expected subject to be gawked');
 	});
 
 	it('should fail to unwatch with non-function listener', () => {
@@ -551,24 +524,21 @@ describe('gawk.unwatch()', () => {
 		}).to.throw(TypeError, 'Expected listener to be a function');
 	});
 
-	it('should unwatch GawkObject changes', () => {
+	it('should unwatch gawked object changes', () => {
 		const gobj = gawk({});
-		let count = 0;
-		const listener = () => {
-			count++;
-		};
+		const callback = sinon.spy();
 
-		gawk.watch(gobj, listener);
+		gawk.watch(gobj, callback);
 
 		gobj.a = 'b';
 		gobj.c = 'd';
 
-		gawk.unwatch(gobj, listener);
+		gawk.unwatch(gobj, callback);
 
 		gobj.e = 'f';
 		gobj.g = 'h';
 
-		expect(count).to.equal(2);
+		expect(callback).to.be.calledTwice;
 	});
 
 	it('should unwatch all listeners', () => {
@@ -594,23 +564,20 @@ describe('gawk.unwatch()', () => {
 		expect(count).to.equal(4);
 	});
 
-	it('should unwatch GawkArray changes', () => {
+	it('should unwatch gawked array changes', () => {
 		const garr = gawk(['a']);
-		let count = 0;
-		const listener = obj => {
-			count++;
-		};
+		const callback = sinon.spy();
 
-		gawk.watch(garr, listener);
+		gawk.watch(garr, callback);
 
 		garr.unshift('b');
 		garr.unshift('c');
 
-		gawk.unwatch(garr, listener);
+		gawk.unwatch(garr, callback);
 
 		garr.unshift('d');
 		garr.unshift('e');
 
-		expect(count).to.equal(2);
+		expect(callback).to.be.calledTwice;
 	});
 });

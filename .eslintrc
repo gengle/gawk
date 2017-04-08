@@ -33,6 +33,7 @@
         "no-cond-assign": 0,
         "no-unused-vars": 0,
         "constructor-super": 0,
-		"no-class-assign": 0
+		"no-class-assign": 0,
+		"no-debugger": 0
     }
 }

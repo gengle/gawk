@@ -4,17 +4,15 @@
 [![NPM Downloads][downloads-image]][downloads-url]
 [![Travis CI Build][travis-image]][travis-url]
 [![Test Coverage][coveralls-image]][coveralls-url]
-[![Code Climate][codeclimate-image]][codeclimate-url]
 [![Deps][david-image]][david-url]
 [![Dev Deps][david-dev-image]][david-dev-url]
 
-Gawk wraps JavaScript objects and arrays making them observable. Once a
-JavaScript value is gawked, you can listen for changes including deeply nested
-changes. Only objects and arrays can be gawked. All other types are passed
-through.
+Gawk wraps JavaScript objects and arrays making them observable. Once a JavaScript object is gawked,
+you can listen for changes including deeply nested changes. Only objects and arrays can be gawked.
+All other types are passed through.
 
-Gawked objects and arrays can be interacted with as if they were regular
-objects/arrays. Built-in functions such as `JSON.stringify()` work as expected.
+Gawked objects and arrays can be interacted with as if they were regular objects/arrays. Built-in
+functions such as `JSON.stringify()` work as expected.
 
 > Note: gawk uses ES2015 proxies and thus requires Node.js 6 or newer.
 
@@ -77,34 +75,44 @@ gawk.watch(obj, [ 'foo', 'bar' ], value => {
 obj.foo.bar = 'world!';
 ```
 
-You can directly create `GawkObject` and `GawkArray` objects:
+To stop watching, simply call `gawk.unwatch()` with the original listener function.
 
 ```javascript
-import { GawkArray, GawkObject } from 'gawk';
+const obj = gawk({ /* ... */ });
 
-const obj = new GawkObject({ foo: 'bar' });
-const arr = new GawkArray('a', 'b', 'c');
+function onChange(obj, src) {
+	console.log('changed!');
+}
+
+gawk.watch(obj, onChange);
+
+obj.foo = 'bar';
+
+gawk.unwatch(obj, onChange);
+
+obj.foo = 'baz'; // does not fire onChange()
 ```
 
-## Upgrading to v3
+## Upgrading to v4
 
-Gawk v3 has dropped all gawk data types except `GawkArray` and `GawkObject`.
+Gawk v4 has dropped all gawk data types. You must always call `gawk()`.
 
-Since Gawk v3 uses ES6 Proxies, you no longer need to call `obj.get()`,
-`obj.set()`, `obj.delete()`, etc.
+Change all `new GawkObject()` calls to `gawk({})` and `new GawkArray()` to `gawk([])`.
 
-Methods `obj.watch()`, `obj.merge()`, and `obj.mergeDeep()` have moved to
-`gawk.watch()`, `gawk.merge()`, and `gawk.mergeDeep()`. The first argument must
-be a gawk object.
+Since Gawk v3 and newer uses ES6 Proxies, you no longer need to call `obj.get()`, `obj.set()`,
+`obj.delete()`, etc.
 
-Gawk v3 no longer hashes values. This means speed. Gawk v3 is about 19 times
-faster than v1 and v2.
+Methods `obj.watch()`, `obj.merge()`, and `obj.mergeDeep()` have moved to `gawk.watch()`,
+`gawk.merge()`, and `gawk.mergeDeep()`. The first argument must be a gawk object.
+
+Starting in v3, Gawk no longer hashes values. This means speed. Gawk v3+ is about 19 times faster
+than v1 and v2.
 
 ## License
 
 (The MIT License)
 
-Copyright (c) 2016 Chris Barber
+Copyright (c) 2016-2017 Chris Barber
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -132,8 +140,6 @@ THE SOFTWARE.
 [travis-url]: https://travis-ci.org/cb1kenobi/gawk
 [coveralls-image]: https://img.shields.io/coveralls/cb1kenobi/gawk/master.svg
 [coveralls-url]: https://coveralls.io/r/cb1kenobi/gawk
-[codeclimate-image]: https://img.shields.io/codeclimate/github/cb1kenobi/gawk.svg
-[codeclimate-url]: https://codeclimate.com/github/cb1kenobi/gawk
 [david-image]: https://img.shields.io/david/cb1kenobi/gawk.svg
 [david-url]: https://david-dm.org/cb1kenobi/gawk
 [david-dev-image]: https://img.shields.io/david/dev/cb1kenobi/gawk.svg

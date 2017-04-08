@@ -141,7 +141,7 @@ export default function gawk(value, parent) {
 	}
 
 	// only objects can be gawked
-	if (!value || typeof value !== 'object') {
+	if (!value || typeof value !== 'object' || value === process.env) {
 		return value;
 	}
 

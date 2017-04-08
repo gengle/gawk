@@ -70,6 +70,17 @@ describe('gawk() object', () => {
 		expect(gobj).to.not.equal(emitter);
 	});
 
+	it('should not gawk process.env', () => {
+		const gobj = gawk(process.env);
+		expect(gobj).not.to.have.property('__gawk__');
+		expect(isGawked(gobj)).to.be.false;
+	});
+
+	it('should gawk clone of process.env', () => {
+		const gobj = gawk(Object.assign({}, process.env));
+		expect(isGawked(gobj)).to.be.true;
+	});
+
 	it('should not allow __gawk__ to be set', () => {
 		const gobj = gawk({});
 		expect(isGawked(gobj)).to.be.true;

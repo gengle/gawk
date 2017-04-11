@@ -55,13 +55,37 @@ describe('gawk() object', () => {
 		}).to.throw(TypeError, 'Expected parent to be gawked');
 	});
 
-	it('should not clobber Date', () => {
+	it('should not gawk Dates', () => {
 		const date = new Date;
 		const gobj = gawk(date);
-		expect(isGawked(gobj)).to.be.true;
-		expect(gobj).to.be.instanceOf(Date);
+		expect(isGawked(gobj)).to.be.false;
+		expect(gobj).to.equal(date);
 		expect(gobj.getTime).to.be.a.Function;
-		expect(gobj).to.not.equal(date);
+		expect(gobj.getTime()).to.be.a.Number;
+	});
+
+	it('should not gawk the JSON namespace', () => {
+		const gobj = gawk(JSON);
+		expect(isGawked(gobj)).to.be.false;
+		expect(gobj).to.equal(JSON);
+	});
+
+	it('should not gawk the Math namespace', () => {
+		const gobj = gawk(Math);
+		expect(isGawked(gobj)).to.be.false;
+		expect(gobj).to.equal(Math);
+	});
+
+	(typeof Intl !== 'undefined' ? it : it.skip)('should not gawk the Intl namespace', () => {
+		const gobj = gawk(Intl);
+		expect(isGawked(gobj)).to.be.false;
+		expect(gobj).to.equal(Intl);
+	});
+
+	(typeof Reflect !== 'undefined' ? it : it.skip)('should not gawk the Reflect namespace', () => {
+		const gobj = gawk(Reflect);
+		expect(isGawked(gobj)).to.be.false;
+		expect(gobj).to.equal(Reflect);
 	});
 
 	it('should not clobber EventEmitter', () => {

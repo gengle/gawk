@@ -4,7 +4,27 @@ if (!Error.prepareStackTrace) {
 
 import fs from 'fs';
 
-const version = JSON.parse(fs.readFileSync(`${__dirname}/../package.json`, 'utf-8')).version;
+/**
+ * The Gawk version number.
+ * @type {String}
+ */
+export const version = JSON.parse(fs.readFileSync(`${__dirname}/../package.json`, 'utf-8')).version;
+
+/**
+ * A list of built-in objects that should not be gawked.
+ * @type {Array}
+ */
+const builtIns = [
+	process.env,
+	Math,
+	JSON
+];
+if (typeof Intl !== 'undefined') {
+	builtIns.push(Intl);
+}
+if (typeof Reflect !== 'undefined') {
+	builtIns.push(Reflect);
+}
 
 /**
  * Determines if the specified variable is gawked.
@@ -28,8 +48,8 @@ export default function gawk(value, parent) {
 		throw new TypeError('Expected parent to be gawked');
 	}
 
-	// only objects can be gawked
-	if (!value || typeof value !== 'object' || value === process.env) {
+	// only objects can be gawked and can't be a built-in object
+	if (!value || typeof value !== 'object' || value instanceof Date || builtIns.indexOf(value) !== -1) {
 		return value;
 	}
 
@@ -55,8 +75,12 @@ export default function gawk(value, parent) {
 
 				if (Object.prototype.hasOwnProperty.call(target, prop)) {
 					changed = target[prop] !== value;
-					if (isGawked(target[prop])) {
-						target[prop].__gawk__.parents.delete(gawked);
+					const parents = isGawked(target[prop]) && target[prop].__gawk__.parents;
+					if (parents) {
+						parents.delete(gawked);
+						if (!parents.size) {
+							target[prop].__gawk__.parents = null;
+						}
 					}
 					if (!Array.isArray(target) || prop !== 'length') {
 						delete target[prop];
@@ -66,7 +90,7 @@ export default function gawk(value, parent) {
 				target[prop] = gawk(value, gawked);
 
 				if (changed) {
-					gawked.__gawk__.notify();
+					notify(gawked);
 				}
 
 				return true;
@@ -82,14 +106,17 @@ export default function gawk(value, parent) {
 				let result = true;
 
 				if (target.hasOwnProperty(prop)) {
-					const value = target[prop];
-					if (isGawked(value)) {
-						value.__gawk__.parents.delete(gawked);
+					const parents = isGawked(target[prop]) && target[prop].__gawk__.parents;
+					if (parents) {
+						parents.delete(gawked);
+						if (!parents.size) {
+							target[prop].__gawk__.parents = null;
+						}
 					}
 
 					result = delete target[prop];
 					if (result) {
-						gawked.__gawk__.notify();
+						notify(gawked);
 					}
 				}
 
@@ -104,21 +131,21 @@ export default function gawk(value, parent) {
 				 * key value is the optional filter to apply to the listener.
 				 * @type {Map}
 				 */
-				listeners: new Map,
+				listeners: null,
 
 				/**
 				 * A list of all the gawk object's parents. These parents are notified when a change
 				 * occurs.
 				 * @type {Set}
 				 */
-				parents: new Set,
+				parents: null,
 
 				/**
 				 * A map of listener functions to the last known hash of the stringified value. This
 				 * is used to detect if a filtered watch should be notified.
 				 * @type {WeakMap}
 				 */
-				previous: new WeakMap,
+				previous: null,
 
 				/**
 				 * A list of child objects that are modified while paused.
@@ -132,63 +159,6 @@ export default function gawk(value, parent) {
 				 * @type {String}
 				 */
 				version,
-
-				/**
-				 * Dispatches change notifications to the listeners.
-				 *
-				 * @param {Object|Array} [source] - The gawk object that was modified.
-				 */
-				notify: function notify(source) {
-					if (source === undefined) {
-						source = gawked;
-					}
-
-					if (this.queue) {
-						this.queue.add(gawked);
-						return;
-					}
-
-					// notify all of this object's listeners
-					for (const [ listener, filter ] of this.listeners) {
-						if (filter) {
-							let obj = gawked;
-							let found = true;
-
-							// find the value we're interested in
-							for (let i = 0, len = filter.length; obj && typeof obj === 'object' && i < len; i++) {
-								if (!obj.hasOwnProperty(filter[i])) {
-									found = false;
-									obj = undefined;
-									break;
-								}
-								obj = obj[filter[i]];
-							}
-
-							// compute the hash of the stringified value
-							const str = JSON.stringify(obj) || '';
-							let hash = 5381;
-							let i = str.length;
-							while (i) {
-								hash = (hash * 33) ^ str.charCodeAt(--i);
-							}
-							hash = hash >>> 0;
-
-							// check if the value changed
-							if ((found || this.previous.has(listener)) && hash !== this.previous.get(listener)) {
-								listener(obj, source);
-							}
-
-							this.previous.set(listener, hash);
-						} else {
-							listener(gawked, source);
-						}
-					}
-
-					// notify all of this object's parents
-					for (const parent of this.parents) {
-						parent.__gawk__.notify(source);
-					}
-				},
 
 				/**
 				 * Dispatches change notifications to the listeners.
@@ -207,7 +177,7 @@ export default function gawk(value, parent) {
 						const queue = this.queue;
 						this.queue = null;
 						for (const instance of queue) {
-							this.notify(instance);
+							notify(gawked, instance);
 						}
 					}
 				}
@@ -267,7 +237,7 @@ export default function gawk(value, parent) {
 						}
 
 						for (const item of arr) {
-							if (isGawked(item)) {
+							if (isGawked(item) && item.__gawk__.parents) {
 								item.__gawk__.parents.delete(this);
 							}
 						}
@@ -291,6 +261,9 @@ export default function gawk(value, parent) {
 	}
 
 	if (parent) {
+		if (!gawked.__gawk__.parents) {
+			gawked.__gawk__.parents = new Set;
+		}
 		gawked.__gawk__.parents.add(parent);
 	}
 
@@ -298,6 +271,74 @@ export default function gawk(value, parent) {
 }
 
 export { gawk as gawk };
+
+/**
+ * Dispatches change notifications to the listeners.
+ *
+ * @param {Object} gobj - The gawked object.
+ * @param {Object|Array} [source] - The gawk object that was modified.
+ */
+function notify(gobj, source) {
+	const state = gobj.__gawk__;
+
+	if (source === undefined) {
+		source = gobj;
+	}
+
+	if (state.queue) {
+		state.queue.add(gobj);
+		return;
+	}
+
+	// notify all of this object's listeners
+	if (state.listeners) {
+		for (const [ listener, filter ] of state.listeners) {
+			if (filter) {
+				let obj = gobj;
+				let found = true;
+
+				// find the value we're interested in
+				for (let i = 0, len = filter.length; obj && typeof obj === 'object' && i < len; i++) {
+					if (!obj.hasOwnProperty(filter[i])) {
+						found = false;
+						obj = undefined;
+						break;
+					}
+					obj = obj[filter[i]];
+				}
+
+				// compute the hash of the stringified value
+				const str = JSON.stringify(obj) || '';
+				let hash = 5381;
+				let i = str.length;
+				while (i) {
+					hash = (hash * 33) ^ str.charCodeAt(--i);
+				}
+				hash = hash >>> 0;
+
+				// check if the value changed
+				if ((found && !state.previous) || (state.previous && hash !== state.previous.get(listener))) {
+					listener(obj, source);
+				}
+
+				if (!state.previous) {
+					state.previous = new WeakMap;
+				}
+
+				state.previous.set(listener, hash);
+			} else {
+				listener(gobj, source);
+			}
+		}
+	}
+
+	// notify all of this object's parents
+	if (state.parents) {
+		for (const parent of state.parents) {
+			notify(parent, source);
+		}
+	}
+}
 
 /**
  * Adds a listener to be called when the specified object or any of its properties/elements are
@@ -330,6 +371,9 @@ gawk.watch = function watch(subject, filter, listener) {
 		throw new TypeError('Expected listener to be a function');
 	}
 
+	if (!subject.__gawk__.listeners) {
+		subject.__gawk__.listeners = new Map;
+	}
 	subject.__gawk__.listeners.set(listener, filter);
 
 	return subject;
@@ -347,17 +391,31 @@ gawk.unwatch = function unwatch(subject, listener) {
 		throw new TypeError('Expected subject to be gawked');
 	}
 
-	if (listener) {
-		if (typeof listener !== 'function') {
-			throw new TypeError('Expected listener to be a function');
+	if (listener && typeof listener !== 'function') {
+		throw new TypeError('Expected listener to be a function');
+	}
+
+	const g = subject.__gawk__;
+
+	if (g.listeners) {
+		if (listener) {
+			g.listeners.delete(listener);
+			if (g.previous) {
+				g.previous.delete(listener);
+			}
+		} else {
+			// remove all listeners
+			for (const [ listener, filter ] of g.listeners) {
+				g.listeners.delete(listener);
+				if (g.previous) {
+					g.previous.delete(listener);
+				}
+			}
 		}
-		subject.__gawk__.listeners.delete(listener);
-		subject.__gawk__.previous.delete(listener);
-	} else {
-		// remove all listeners
-		for (const [ listener, filter ] of subject.__gawk__.listeners) {
-			subject.__gawk__.listeners.delete(listener);
-			subject.__gawk__.previous.delete(listener);
+
+		if (!g.listeners.size) {
+			g.listeners = null;
+			g.previous = null;
 		}
 	}
 

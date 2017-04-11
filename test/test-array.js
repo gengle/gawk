@@ -156,7 +156,7 @@ describe('fill()', () => {
 		expect(garr[1].__gawk__.parents.has(garr)).to.be.true;
 		expect(isGawked(garr[2])).to.be.true;
 		expect(garr[2].__gawk__.parents.has(garr)).to.be.true;
-		expect(gobj.__gawk__.parents.has(garr)).to.be.false;
+		expect(gobj.__gawk__.parents).to.be.null;
 	});
 });
 
@@ -182,7 +182,7 @@ describe('pop()', () => {
 		expect(gobj.__gawk__.parents.has(garr)).to.be.true;
 		const gobj2 = garr.pop();
 		expect(gobj2).to.equal(gobj);
-		expect(gobj.__gawk__.parents.has(garr)).to.be.false;
+		expect(gobj.__gawk__.parents).to.be.null;
 	});
 });
 
@@ -261,7 +261,7 @@ describe('shift()', () => {
 		expect(gobj.__gawk__.parents.has(garr)).to.be.true;
 		const gobj2 = garr.shift();
 		expect(gobj2).to.equal(gobj);
-		expect(gobj.__gawk__.parents.has(garr)).to.be.false;
+		expect(gobj.__gawk__.parents).to.be.null;
 	});
 });
 
@@ -282,7 +282,9 @@ describe('splice()', () => {
 	});
 
 	it('should detach and remove gawk objects after the start index', () => {
-		const garr = gawk([ { a: 1 }, { b: 2 }, { c: 3 } ]);
+		const gobj = gawk({ c: 3 });
+		const gobj2 = gawk({ d: gobj });
+		const garr = gawk([ { a: 1 }, { b: 2 }, gobj ]);
 		expect(garr[0].__gawk__.parents.has(garr)).to.be.true;
 		expect(garr[1].__gawk__.parents.has(garr)).to.be.true;
 		expect(garr[2].__gawk__.parents.has(garr)).to.be.true;
@@ -292,8 +294,8 @@ describe('splice()', () => {
 		expect(arr).to.deep.equal([ { b: 2 }, { c: 3 } ]);
 		expect(garr).to.deep.equal([ { a: 1 } ]);
 		expect(garr[0].__gawk__.parents.has(garr)).to.be.true;
-		expect(arr[0].__gawk__.parents.has(garr)).to.be.false;
-		expect(arr[0].__gawk__.parents.has(garr)).to.be.false;
+		expect(arr[0].__gawk__.parents).to.be.null;
+		expect(arr[0].__gawk__.parents).to.be.null;
 	});
 
 	it('should remove elements and add elements', () => {
@@ -305,7 +307,7 @@ describe('splice()', () => {
 		const arr = garr.splice(1, 1, { d: 4 }, { e: 5 });
 		expect(arr).to.have.lengthOf(1);
 		expect(arr).to.deep.equal([ { b: 2 } ]);
-		expect(arr[0].__gawk__.parents.has(garr)).to.be.false;
+		expect(arr[0].__gawk__.parents).to.be.null;
 
 		expect(garr).to.deep.equal([ { a: 1 }, { d: 4 }, { e: 5 }, { c: 3 } ]);
 		expect(garr[0].__gawk__.parents.has(garr)).to.be.true;

@@ -1,6 +1,6 @@
 {
   "name": "gawk",
-  "version": "4.1.0",
+  "version": "4.2.0",
   "description": "Observable JavaScript object model",
   "main": "./dist/index.js",
   "author": "Chris Barber <chris@cb1inc.com> (https://github.com/cb1kenobi)",
@@ -44,7 +44,7 @@
     "gulp-load-plugins": "^1.5.0",
     "gulp-mocha": "^3.0.1",
     "gulp-plumber": "^1.1.0",
-    "gulp-sourcemaps": "^2.5.1",
+    "gulp-sourcemaps": "^2.6.0",
     "sinon": "^2.1.0",
     "sinon-chai": "^2.9.0"
   },

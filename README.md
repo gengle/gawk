@@ -93,6 +93,106 @@ gawk.unwatch(obj, onChange);
 obj.foo = 'baz'; // does not fire onChange()
 ```
 
+## API
+
+### `gawk(obj)`
+
+Gawks the specified object.
+
+ * `obj` - (Object) The object to gawk.
+
+If `obj` is not an object, is `null`, or is a built-in object such as `JSON` or `Math`, then the
+original value is returned, otherwise it returns the gawked object.
+
+Note that the returned object is a proxy-wrapped version of the original input object. You can
+interact with the object as you normally would. Some Array methods are wrapped to suppress multiple
+change notifications for a single call or to workaround limitations of the proxied objects.
+
+### `isGawked(obj)`
+
+Determines if an variable is a gawked object.
+
+ * `obj` - (Object) The object to check if gawked.
+
+Returns `true` if the specified object has been gawked, otherwise `false`
+
+### `gawk.watch(subject, listener)`
+
+### `gawk.watch(subject, filter, listener)`
+
+Starts watching the specified gawked object for changes.
+
+ * `subject` - (Object) The gawked object to watch.
+ * `filter` - (Array[String] | String) [optional] A list of one or more nested namespaces to filter.
+   When a filter is not specified, then it watches the entire object for changes.
+ * `listener` - (Function) The function to call when a change occurs.
+
+Returns the original `subject` value.
+
+The filter is works by matching only a specific namespace pattern. For example, say you have a
+gawked object `{ foo: { bar: { baz: 'wiz' } } }` and filtering by `[ 'foo', 'bar' ]`. When you set
+`foo.bar.baz = 'pow'`, the listener function will be called with the value `{ baz: 'pow' }`. When
+you set `foo.bar.raf = 'muk'`, this change will _not_ be emitted.
+
+### `gawk.unwatch(obj)`
+
+### `gawk.unwatch(obj, fn)`
+
+Stops watching a gawked object.
+
+* `subject` - (Object) The gawked object to watch.
+* `listener` - (Function) [optional] The function to call when a change occurs. When a `listener` is
+  not specified, all listeners are removed from the gawked object.
+
+Returns the original `subject` value.
+
+### `gawk.merge(obj, ...objs)`
+
+Performs a shallow merge of one or more objects into the specified gawked object.
+
+ * `obj` - (Object) The gawked object to merge values into.
+ * `...objs` - (Object) One or more objects to merge in.
+
+Returns the original gawked object `obj`.
+
+Note that subsequent object properties will overwrite existing values. Only a single change event is
+emitted after all objects have been merged.
+
+### `gawk.mergeDeep(obj, ...objs)`
+
+Performs a deep merge of one or more objects into the specified gawked object.
+
+* `obj` - (Object) The gawked object to merge values into.
+* `...objs` - (Object) One or more objects to merge in.
+
+Returns the original gawked object `obj`.
+
+Just as `gawk.merge()`, subsequent object properties will overwrite existing values. Only a single
+change event is emitted after all objects have been merged.
+
+If the destination is an array, the two arrays are concatenated.
+
+## Performance
+
+Each gawked object is wrapped in a `Proxy` and contains a object with the gawked object state:
+listeners, parents, previous values, and notification queue. These data structures are
+created on an as needed basis. A gawked object with no listeners uses an insignificant amount of
+memory. However, if you have an object with many levels of deeply nested objects, it could add up
+quickly.
+
+As soon as listeners are added via `gawk.watch()`, it will create the `Map` of listeners. If you add
+a filter, then a `WeakMap` of previous values gets created. Each gawked object also tracks its
+parents using a `Set`. Again, if filters are not used or the object is not nested (i.e. has no
+parent), then there's not a significant amount of memory used.
+
+For runtime performance, the more listeners, the slower the notification system is. This is
+especially true if the object being modified is deeply nested. Notifications are propagated through
+each parent and each parent's parent and so on.
+
+There aren't any official benchmarks. It's up to you to decide if Gawk is right for your app.
+Exercise common sense. Don't gawk objects with several dozens of deeply nested objects. Don't add
+thousands of listeners.
+
 ## Upgrading to v4
 
 Gawk v4 has dropped all gawk data types. You must always call `gawk()`.

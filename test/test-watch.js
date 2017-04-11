@@ -302,7 +302,7 @@ describe('gawk.watch()', () => {
 		gawk.merge(child, bar);
 		// { foo: { bar: 'wiz' } }
 		expect(callback).to.be.calledTwice;
-		expect(bar.__gawk__.parents.has(child)).to.be.false;
+		expect(bar.__gawk__.parents).to.be.null;
 
 		const foo = gobj.foo;
 		expect(foo.__gawk__.parents.has(gobj)).to.be.true;
@@ -310,7 +310,7 @@ describe('gawk.watch()', () => {
 		gawk.merge(child, { bar: 'wow' });
 		// { foo: { bar: 'wow' } }
 		expect(callback).to.be.calledThrice;
-		expect(bar.__gawk__.parents.has(child)).to.be.false;
+		expect(bar.__gawk__.parents).to.be.null;
 		expect(child.__gawk__.parents.has(gobj)).to.be.true;
 
 		expect(gobj).to.deep.equal({ foo: { bar: 'wow' } });
@@ -349,7 +349,7 @@ describe('gawk.watch()', () => {
 		gawk.mergeDeep(child, { bar: { paz: 789 } });
 		// { foo: { bar: { pow: 123, wiz: 456, paz: 789 } } }
 		expect(callback).to.be.calledThrice;
-		expect(bar.__gawk__.parents.has(child)).to.be.false;
+		expect(bar.__gawk__.parents).to.be.null;
 
 		expect(gobj).to.deep.equal({ foo: { bar: { pow: 123, wiz: 456, paz: 789 } } });
 	});
@@ -541,6 +541,23 @@ describe('gawk.unwatch()', () => {
 		expect(callback).to.be.calledTwice;
 	});
 
+	it('should unwatch filtered gawked object changes', () => {
+		const gobj = gawk({});
+		const callback = sinon.spy();
+
+		gawk.watch(gobj, 'a', callback);
+
+		gobj.a = 'b';
+		gobj.c = 'd';
+
+		gawk.unwatch(gobj, callback);
+
+		gobj.a = 'f';
+		gobj.c = 'h';
+
+		expect(callback).to.be.calledOnce;
+	});
+
 	it('should unwatch all listeners', () => {
 		const gobj = gawk({});
 		let count = 0;
@@ -562,6 +579,29 @@ describe('gawk.unwatch()', () => {
 		gobj.g = 'h';
 
 		expect(count).to.equal(4);
+	});
+
+	it('should unwatch all filtered listeners', () => {
+		const gobj = gawk({});
+		let count = 0;
+
+		gawk.watch(gobj, 'a', () => {
+			count++;
+		});
+
+		gawk.watch(gobj, 'a', () => {
+			count++;
+		});
+
+		gobj.a = 'b';
+		gobj.c = 'd';
+
+		gawk.unwatch(gobj);
+
+		gobj.a = 'f';
+		gobj.c = 'h';
+
+		expect(count).to.equal(2);
 	});
 
 	it('should unwatch gawked array changes', () => {

@@ -1,3 +1,4 @@
+/* istanbul ignore if */
 if (!Error.prepareStackTrace) {
 	require('source-map-support/register');
 }
@@ -423,10 +424,39 @@ gawk.unwatch = function unwatch(subject, listener) {
 };
 
 /**
+ * Mix an object or gawked object into a gawked object.
+ *
+ * @param {Object} gobj - The destination gawked object.
+ * @param {Object} src - The source object to copy from.
+ * @param {Boolean} [deep=false] - When `true`, mixes subobjects into each other.
+ */
+function mixer(gobj, src, deep) {
+	for (const key of Object.getOwnPropertyNames(src)) {
+		if (key === '__gawk__') {
+			continue;
+		}
+
+		const srcValue = src[key];
+
+		if (deep && srcValue !== null && typeof srcValue === 'object' && !Array.isArray(srcValue)) {
+			if (!isGawked(gobj[key])) {
+				gobj[key] = gawk({}, gobj);
+			}
+			mixer(gobj[key], srcValue, deep);
+		} else if (Array.isArray(gobj[key]) && Array.isArray(srcValue)) {
+			// overwrite destination with new values
+			gobj[key].splice(0, gobj[key].length, ...srcValue);
+		} else {
+			gobj[key] = gawk(srcValue, gobj);
+		}
+	}
+}
+
+/**
  * Mixes an array of objects or gawked objects into the specified gawked object.
  *
  * @param {Array.<Object>} objs - An array of objects or gawked objects.
- * @param {Boolean} [deep=false] - When true, mixes subobjects into each other.
+ * @param {Boolean} [deep=false] - When `true`, mixes subobjects into each other.
  * @returns {Object}
  */
 function mix(objs, deep) {
@@ -450,35 +480,8 @@ function mix(objs, deep) {
 	// has been merged
 	gobj.__gawk__.pause();
 
-	/**
-	 * Mix an object or gawked object into a gawked object.
-	 * @param {Object} gobj
-	 * @param {Object} src
-	 */
-	const mixer = (gobj, src) => {
-		for (const key of Object.getOwnPropertyNames(src)) {
-			if (key === '__gawk__') {
-				continue;
-			}
-
-			const srcValue = src[key];
-
-			if (deep && srcValue !== null && typeof srcValue === 'object' && !Array.isArray(srcValue)) {
-				if (!isGawked(gobj[key])) {
-					gobj[key] = gawk({}, gobj);
-				}
-				mixer(gobj[key], srcValue);
-			} else if (Array.isArray(gobj[key]) && Array.isArray(srcValue)) {
-				// overwrite destination with new values
-				gobj[key].splice(0, gobj[key].length, ...srcValue);
-			} else {
-				gobj[key] = gawk(srcValue, gobj);
-			}
-		}
-	};
-
 	for (const obj of objs) {
-		mixer(gobj, obj);
+		mixer(gobj, obj, deep);
 	}
 
 	gobj.__gawk__.resume();

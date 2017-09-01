@@ -1,4 +1,4 @@
-import gawk, { Gawk, isGawked } from '../src/index';
+import gawk, { Gawk, isGawked } from '../dist/index';
 
 import { EventEmitter } from 'events';
 
@@ -27,13 +27,13 @@ describe('gawk() object', () => {
 			undef: undefined,
 			nul: null,
 			nan: NaN,
-			arr: ['a', 123, 4.56, null, undefined],
+			arr: [ 'a', 123, 4.56, null, undefined ],
 			fn: function () {}
 		};
 		const gobj = gawk(obj);
 		expect(isGawked(gobj)).to.be.true;
 		expect(Object.keys(gobj)).to.deep.equal(Object.keys(obj));
-		expect(gobj).to.be.an.object;
+		expect(gobj).to.be.an('object');
 		expect(gobj).to.deep.equal(obj);
 		expect(isGawked(gobj.arr)).to.be.true;
 		expect(gobj.arr.__gawk__.parents.has(gobj)).to.be.true;
@@ -43,7 +43,7 @@ describe('gawk() object', () => {
 		const obj = { foo: { bar: 'baz' } };
 		const gobj = gawk(obj);
 		expect(isGawked(gobj)).to.be.true;
-		expect(gobj).to.be.an.object;
+		expect(gobj).to.be.an('object');
 		expect(gobj).to.deep.equal(obj);
 		expect(isGawked(gobj.foo)).to.be.true;
 		expect(gobj.foo.__gawk__.parents.has(gobj)).to.be.true;
@@ -60,8 +60,8 @@ describe('gawk() object', () => {
 		const gobj = gawk(date);
 		expect(isGawked(gobj)).to.be.false;
 		expect(gobj).to.equal(date);
-		expect(gobj.getTime).to.be.a.Function;
-		expect(gobj.getTime()).to.be.a.Number;
+		expect(gobj.getTime).to.be.a('function');
+		expect(gobj.getTime()).to.be.a('number');
 	});
 
 	it('should not gawk the JSON namespace', () => {
@@ -93,7 +93,7 @@ describe('gawk() object', () => {
 		const gobj = gawk(emitter);
 		expect(isGawked(gobj)).to.be.true;
 		expect(gobj).to.be.instanceOf(EventEmitter);
-		expect(gobj.on).to.be.a.Function;
+		expect(gobj.on).to.be.a('function');
 		expect(gobj).to.not.equal(emitter);
 	});
 
@@ -172,7 +172,7 @@ describe('get property', () => {
 
 	it('should get a deeply nested object by key', () => {
 		const str = gawk({ foo: { bar: 'wiz' } }).foo.bar;
-		expect(str).to.be.a.string;
+		expect(str).to.be.a('string');
 		expect(str).to.equal('wiz');
 	});
 
@@ -232,7 +232,7 @@ describe('delete property', () => {
 	it('should delete an existing key/value', () => {
 		const gobj = gawk({ foo: 'bar' });
 		const r = delete gobj.foo;
-		expect(r).to.be.tru;
+		expect(r).to.be.true;
 		expect(Object.keys(gobj).length).to.equal(0);
 		expect(gobj).to.deep.equal({});
 	});
@@ -240,7 +240,7 @@ describe('delete property', () => {
 	it('should not error trying to delete non-existent key', () => {
 		const gobj = gawk({});
 		const r = delete gobj.foo;
-		expect(r).to.be.tru;
+		expect(r).to.be.true;
 		expect(Object.keys(gobj).length).to.equal(0);
 		expect(gobj).to.deep.equal({});
 	});
@@ -261,9 +261,9 @@ describe('Object.keys()', () => {
 			pi: 3.14
 		});
 		const keys = Object.keys(gobj);
-		expect(keys).to.be.an.array;
+		expect(keys).to.be.an('array');
 		expect(keys).to.have.lengthOf(2);
-		expect(keys).to.deep.equal(['foo', 'pi']);
+		expect(keys).to.deep.equal([ 'foo', 'pi' ]);
 	});
 });
 
@@ -295,8 +295,8 @@ describe('merge()', () => {
 
 	it('should merge multiple JS objects and gawked objects', () => {
 		let gobj = gawk({ foo: 'bar' });
-		gobj = gawk.merge(gobj, { baz: 'wiz' }, gawk({ pi: 3.14 }), { num: 123 }, gawk({ arr: ['a', 'b'] }));
-		expect(gobj).to.deep.equal({ foo: 'bar', baz: 'wiz', pi: 3.14, num: 123, arr: ['a', 'b'] });
+		gobj = gawk.merge(gobj, { baz: 'wiz' }, gawk({ pi: 3.14 }), { num: 123 }, gawk({ arr: [ 'a', 'b' ] }));
+		expect(gobj).to.deep.equal({ foo: 'bar', baz: 'wiz', pi: 3.14, num: 123, arr: [ 'a', 'b' ] });
 		expect(isGawked(gobj.arr)).to.be.true;
 		expect(gobj.arr.__gawk__.parents.has(gobj)).to.be.true;
 	});
@@ -322,7 +322,7 @@ describe('merge()', () => {
 		expect(() => { gawk.merge(gobj, 123); }).to.throw(TypeError, 'Expected merge source to be an object');
 		expect(() => { gawk.merge(gobj, 3.14); }).to.throw(TypeError, 'Expected merge source to be an object');
 		expect(() => { gawk.merge(gobj, NaN); }).to.throw(TypeError, 'Expected merge source to be an object');
-		expect(() => { gawk.merge(gobj, ['a', 'b']); }).to.throw(TypeError, 'Expected merge source to be an object');
+		expect(() => { gawk.merge(gobj, [ 'a', 'b' ]); }).to.throw(TypeError, 'Expected merge source to be an object');
 		expect(() => { gawk.merge(gobj, function () {}); }).to.throw(TypeError, 'Expected merge source to be an object');
 	});
 
@@ -335,7 +335,7 @@ describe('merge()', () => {
 		expect(() => { gawk.merge(gobj, gawk(123)); }).to.throw(TypeError, 'Expected merge source to be an object');
 		expect(() => { gawk.merge(gobj, gawk(3.14)); }).to.throw(TypeError, 'Expected merge source to be an object');
 		expect(() => { gawk.merge(gobj, gawk(NaN)); }).to.throw(TypeError, 'Expected merge source to be an object');
-		expect(() => { gawk.merge(gobj, gawk(['a', 'b'])); }).to.throw(TypeError, 'Expected merge source to be an object');
+		expect(() => { gawk.merge(gobj, gawk([ 'a', 'b' ])); }).to.throw(TypeError, 'Expected merge source to be an object');
 		expect(() => { gawk.merge(gobj, gawk(function () {})); }).to.throw(TypeError, 'Expected merge source to be an object');
 	});
 
@@ -370,8 +370,8 @@ describe('mergeDeep()', () => {
 
 	it('should merge multiple JS objects and gawked objects', () => {
 		let gobj = gawk({ foo: 'bar' });
-		gobj = gawk.mergeDeep(gobj, { baz: 'wiz' }, gawk({ pi: 3.14 }), { num: 123 }, gawk({ arr: ['a', 'b'] }));
-		expect(gobj).to.deep.equal({ foo: 'bar', baz: 'wiz', pi: 3.14, num: 123, arr: ['a', 'b'] });
+		gobj = gawk.mergeDeep(gobj, { baz: 'wiz' }, gawk({ pi: 3.14 }), { num: 123 }, gawk({ arr: [ 'a', 'b' ] }));
+		expect(gobj).to.deep.equal({ foo: 'bar', baz: 'wiz', pi: 3.14, num: 123, arr: [ 'a', 'b' ] });
 		expect(isGawked(gobj.arr)).to.be.true;
 		expect(gobj.arr.__gawk__.parents.has(gobj)).to.be.true;
 	});

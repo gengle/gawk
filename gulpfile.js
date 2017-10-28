@@ -36,18 +36,33 @@ gulp.task('build', ['clean-dist', 'lint-src'], function () {
 		.pipe(gulp.dest(distDir));
 });
 
-gulp.task('docs', ['lint-src', 'clean-docs'], function () {
-	return gulp.src('src')
-		.pipe($.plumber())
-		.pipe($.debug({ title: 'docs' }))
-		.pipe($.esdoc({
-			// debug: true,
-			destination: docsDir,
-			plugins: [
-				{ name: 'esdoc-es7-plugin' }
-			],
-			title: manifest.name
-		}));
+gulp.task('docs', ['clean-docs'], () => {
+	const esdoc = require('esdoc').default;
+
+	esdoc.generate({
+		// debug: true,
+		destination: docsDir,
+		plugins: [
+			{
+				name: 'esdoc-standard-plugin',
+				option: {
+					brand: {
+						title:       manifest.name,
+						description: manifest.description,
+						respository: 'https://github.com/cb1kenobi/gawk',
+						site:        'https://github.com/cb1kenobi/gawk'
+					}
+				}
+			},
+			{
+				name: 'esdoc-ecmascript-proposal-plugin',
+				option: {
+					all: true
+				}
+			}
+		],
+		source: './src'
+	});
 });
 
 /*

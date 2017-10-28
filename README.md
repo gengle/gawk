@@ -7,9 +7,10 @@
 [![Deps][david-image]][david-url]
 [![Dev Deps][david-dev-image]][david-dev-url]
 
-Gawk wraps JavaScript objects and arrays making them observable. Once a JavaScript object is gawked,
-you can listen for changes including deeply nested changes. Only objects and arrays can be gawked.
-All other types are passed through.
+Gawk wraps JavaScript objects and arrays using ES2015 proxies making them observable. Once a
+JavaScript object (or array) is gawked, you can listen for changes including deeply nested changes.
+
+Only objects and arrays can be gawked. All other types are passed through.
 
 Gawked objects and arrays can be interacted with as if they were regular objects/arrays. Built-in
 functions such as `JSON.stringify()` work as expected.
@@ -18,7 +19,7 @@ functions such as `JSON.stringify()` work as expected.
 
 ## Installation
 
-    npm install gawk
+    npm i --save gawk
 
 ## Examples
 
@@ -93,6 +94,26 @@ gawk.unwatch(obj, onChange);
 obj.foo = 'baz'; // does not fire onChange()
 ```
 
+To update an object and preserve the listeners, you can use the `gawk.set()` function.
+
+```javascript
+const obj = gawk({
+	foo: 'bar'
+});
+
+gawk.watch(obj, () => {
+	console.log('changed!');
+});
+
+gawk.set(obj, { baz: 'wiz' });
+
+console.log(obj); // { baz: 'wiz' }
+
+obj.baz = 'wow';
+
+console.log(obj); // { baz: 'wow' }
+```
+
 ## API
 
 ### `gawk(obj)`
@@ -115,6 +136,19 @@ Determines if an variable is a gawked object.
  * `obj` - (Object) The object to check if gawked.
 
 Returns `true` if the specified object has been gawked, otherwise `false`
+
+### `gawk.set(dest, src)`
+
+### `gawk.set(dest, src, compareFn)`
+
+Replaces the entire definition of a gawked object with another object or array while preserving any
+listeners and dispatches change nofications afterwards.
+
+ * `dest` - (Object|Array) The destination object. It will be automatically gawked if not already.
+ * `src` - (Object|Array) The source object or array to copy from.
+ * `compareFn` - (Function) An optional function to call when comparing elements of an array.
+
+Returns the original `dest` object.
 
 ### `gawk.watch(subject, listener)`
 
@@ -210,27 +244,7 @@ than v1 and v2.
 
 ## License
 
-(The MIT License)
-
-Copyright (c) 2016-2017 Chris Barber
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+MIT
 
 [npm-image]: https://img.shields.io/npm/v/gawk.svg
 [npm-url]: https://npmjs.org/package/gawk

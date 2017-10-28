@@ -1,4 +1,4 @@
-/* istanbul ignore if */
+// istanbul ignore if
 if (!Error.prepareStackTrace) {
 	require('source-map-support/register');
 }
@@ -13,7 +13,7 @@ export const version = JSON.parse(fs.readFileSync(`${__dirname}/../package.json`
 
 /**
  * A list of built-in objects that should not be gawked.
- * @type {Array}
+ * @type {Array.<Object>}
  */
 const builtIns = [
 	process.env,
@@ -166,7 +166,7 @@ export default function gawk(value, parent) {
 				 */
 				pause: function pause() {
 					if (!this.queue) {
-						this.queue = new Set;
+						this.queue = new Set();
 					}
 				},
 
@@ -263,7 +263,7 @@ export default function gawk(value, parent) {
 
 	if (parent) {
 		if (!gawked.__gawk__.parents) {
-			gawked.__gawk__.parents = new Set;
+			gawked.__gawk__.parents = new Set();
 		}
 		gawked.__gawk__.parents.add(parent);
 	}
@@ -286,6 +286,7 @@ function notify(gobj, source) {
 		source = gobj;
 	}
 
+	// if we're paused, add this object to the list of objects that changed
 	if (state.queue) {
 		state.queue.add(gobj);
 		return;
@@ -323,7 +324,7 @@ function notify(gobj, source) {
 				}
 
 				if (!state.previous) {
-					state.previous = new WeakMap;
+					state.previous = new WeakMap();
 				}
 
 				state.previous.set(listener, hash);
@@ -340,6 +341,149 @@ function notify(gobj, source) {
 		}
 	}
 }
+
+/**
+ * Copies listeners from a source gawked object ot a destination gawked object. Note that the
+ * arguments must both be objects and only the `dest` is required to already be gawked.
+ *
+ * @param {Object|Array} dest - A gawked object to copy the listeners to.
+ * @param {Object|Array} src - An object to copy the listeners from.
+ */
+function copyListeners(dest, src) {
+	if (isGawked(src) && src.__gawk__.listeners) {
+		if (dest.__gawk__.listeners) {
+			for (const [ listener, filter ] of src.__gawk__.listeners) {
+				dest.__gawk__.listeners.set(listener, filter);
+			}
+		} else {
+			dest.__gawk__.listeners = new Map(src.__gawk__.listeners);
+		}
+	}
+}
+
+/**
+ * A helper function for replacing the contents of one gawked object with another. It takes care of
+ * recursively gawking all decending objects and copying listeners over.
+ *
+ * @param {Object|Array} dest - The destination gawked object or array.
+ * @param {Object|Array} src - The source object or array.
+ * @param {Function} [compareFn] - A function to call to compare a source and destination to check if
+ * they are the same.
+ * @returns {Object|Array} Returns the destination gawked object.
+ */
+gawk.set = function set(dest, src, compareFn) {
+	if (!dest || typeof dest !== 'object') {
+		throw new TypeError('Expected destination to be an object');
+	}
+
+	if (!src || typeof src !== 'object') {
+		// source is not an object, so just return it
+		return src;
+	}
+
+	if (!compareFn) {
+		compareFn = (dest, src) => dest === src;
+	} else if (typeof compareFn !== 'function') {
+		throw new TypeError('Expected compare callback to be a function');
+	}
+
+	const walk = (dest, src, quiet) =>  {
+		// suspend notifications if the dest is a new gawk object
+		if (!quiet) {
+			dest.__gawk__.pause();
+		}
+
+		if (Array.isArray(src)) {
+			// istanbul ignore if
+			if (!Array.isArray(dest)) {
+				throw new Error('Source is an array and expected dest to also be an array');
+			}
+
+			const destCopy = [ ...dest ];
+			const tmp = [];
+
+			for (let i = 0, len = src.length; i < len; i++) {
+				let srcValue = src[i];
+				const srcValueIsObject = srcValue !== null && typeof srcValue === 'object';
+
+				for (let j = 0; j < destCopy.length; j++) {
+					const destValue = destCopy[j];
+
+					if (srcValueIsObject && destValue !== null && typeof destValue === 'object') {
+						if (compareFn(destValue, srcValue)) {
+							destCopy.splice(j, 1);
+							srcValue = gawk.mergeDeep(gawk(Array.isArray(srcValue) ? [] : {}), srcValue);
+							copyListeners(srcValue, destValue);
+						}
+					} else if (srcValue === destValue) {
+						destCopy.splice(j, 1);
+					}
+				}
+
+				tmp.push(srcValue);
+			}
+
+			// replace the contents of dest with that of tmp
+			// note that this will call the proxy method and handle the parent wireup for us
+			dest.splice(0, dest.length, ...tmp);
+
+		} else {
+			// istanbul ignore if
+			if (!dest || typeof dest !== 'object') {
+				throw new Error('Source is an object and expected dest to also be an object');
+			}
+
+			const tmp = {};
+
+			for (const key of Object.getOwnPropertyNames(src)) {
+				if (key === '__gawk__') {
+					continue;
+				}
+
+				const srcValue = src[key];
+
+				// if the source value is not an object, return it now
+				if (srcValue === null || typeof srcValue !== 'object') {
+					tmp[key] = srcValue;
+					continue;
+				}
+
+				// create a new dest object to copy the source into
+				const destValue = gawk(Array.isArray(srcValue) ? [] : {});
+				tmp[key] = walk(destValue, srcValue, !dest.hasOwnProperty(key));
+			}
+
+			// prune the existing object, then copy all the properties from our temp object
+			for (const key of Object.getOwnPropertyNames(dest)) {
+				if (key !== '__gawk__') {
+					delete dest[key];
+				}
+			}
+			Object.assign(dest, tmp);
+		}
+
+		// copy the listeners
+		copyListeners(dest, src);
+
+		// resume and send out change notifications
+		dest.__gawk__.resume();
+
+		return dest;
+	};
+
+	const destIsArray = Array.isArray(dest);
+	const srcIsArray = Array.isArray(src);
+
+	if (destIsArray !== srcIsArray) {
+		// the type changed and there's no clear way to compare them, so just return a gawked clone
+		// of the source
+		dest = srcIsArray ? [] : {};
+	}
+
+	const gawked = isGawked(dest);
+
+	return walk(gawked ? dest : gawk(dest), src, !gawked);
+};
 
 /**
  * Adds a listener to be called when the specified object or any of its properties/elements are
@@ -373,7 +517,7 @@ gawk.watch = function watch(subject, filter, listener) {
 	}
 
 	if (!subject.__gawk__.listeners) {
-		subject.__gawk__.listeners = new Map;
+		subject.__gawk__.listeners = new Map();
 	}
 	subject.__gawk__.listeners.set(listener, filter);
 
@@ -424,39 +568,10 @@ gawk.unwatch = function unwatch(subject, listener) {
 };
 
 /**
- * Mix an object or gawked object into a gawked object.
- *
- * @param {Object} gobj - The destination gawked object.
- * @param {Object} src - The source object to copy from.
- * @param {Boolean} [deep=false] - When `true`, mixes subobjects into each other.
- */
-function mixer(gobj, src, deep) {
-	for (const key of Object.getOwnPropertyNames(src)) {
-		if (key === '__gawk__') {
-			continue;
-		}
-
-		const srcValue = src[key];
-
-		if (deep && srcValue !== null && typeof srcValue === 'object' && !Array.isArray(srcValue)) {
-			if (!isGawked(gobj[key])) {
-				gobj[key] = gawk({}, gobj);
-			}
-			mixer(gobj[key], srcValue, deep);
-		} else if (Array.isArray(gobj[key]) && Array.isArray(srcValue)) {
-			// overwrite destination with new values
-			gobj[key].splice(0, gobj[key].length, ...srcValue);
-		} else {
-			gobj[key] = gawk(srcValue, gobj);
-		}
-	}
-}
-
-/**
  * Mixes an array of objects or gawked objects into the specified gawked object.
  *
  * @param {Array.<Object>} objs - An array of objects or gawked objects.
- * @param {Boolean} [deep=false] - When `true`, mixes subobjects into each other.
+ * @param {Boolean} [deep=false] - When true, mixes subobjects into each other.
  * @returns {Object}
  */
 function mix(objs, deep) {
@@ -480,8 +595,35 @@ function mix(objs, deep) {
 	// has been merged
 	gobj.__gawk__.pause();
 
+	/**
+	 * Mix an object or gawked object into a gawked object.
+	 * @param {Object} gobj - The destination gawked object.
+	 * @param {Object} src - The source object to copy from.
+	 */
+	const mixer = (gobj, src) => {
+		for (const key of Object.getOwnPropertyNames(src)) {
+			if (key === '__gawk__') {
+				continue;
+			}
+
+			const srcValue = src[key];
+
+			if (deep && srcValue !== null && typeof srcValue === 'object' && !Array.isArray(srcValue)) {
+				if (!isGawked(gobj[key])) {
+					gobj[key] = gawk({}, gobj);
+				}
+				mixer(gobj[key], srcValue);
+			} else if (Array.isArray(gobj[key]) && Array.isArray(srcValue)) {
+				// overwrite destination with new values
+				gobj[key].splice(0, gobj[key].length, ...srcValue);
+			} else {
+				gobj[key] = gawk(srcValue, gobj);
+			}
+		}
+	};
+
 	for (const obj of objs) {
-		mixer(gobj, obj, deep);
+		mixer(gobj, obj);
 	}
 
 	gobj.__gawk__.resume();
@@ -492,8 +634,7 @@ function mix(objs, deep) {
 /**
  * Performs a shallow merge of one or more objects into the specified gawk object.
  *
- * @param {Object} gobj - The destination gawked object.
- * @param {...Object} objs - One or more objects to merge in.
+ * @param {...Object} objs - The destination object followed by one or more objects to merge in.
  * @returns {Object}
  */
 gawk.merge = function merge(...objs) {
@@ -503,8 +644,7 @@ gawk.merge = function merge(...objs) {
 /**
  * Performs a deep merge of one or more objects into the specified gawk object.
  *
- * @param {Object} gobj - The destination gawked object.
- * @param {...Object} objs - One or more objects to deeply merge in.
+ * @param {...Object} objs - The destination object followed by one or more objects to deeply merge in.
  * @returns {Object}
  */
 gawk.mergeDeep = function mergeDeep(...objs) {

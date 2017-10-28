@@ -274,7 +274,7 @@ describe('JSON.stringify()', () => {
 	});
 });
 
-describe('merge()', () => {
+describe('gawk.merge()', () => {
 	it('should merge a JS object', () => {
 		let gobj = gawk({ foo: 'bar' });
 		gobj = gawk.merge(gobj, { pi: 3.14 });
@@ -355,7 +355,7 @@ describe('merge()', () => {
 	});
 });
 
-describe('mergeDeep()', () => {
+describe('gawk.mergeDeep()', () => {
 	it('should merge a JS object', () => {
 		let gobj = gawk({ foo: 'bar' });
 		gobj = gawk.mergeDeep(gobj, { pi: 3.14 });

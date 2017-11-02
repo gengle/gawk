@@ -382,7 +382,10 @@ gawk.set = function set(dest, src, compareFn) {
 	}
 
 	if (!compareFn) {
-		compareFn = (dest, src) => dest === src;
+		compareFn = (dest, src) => {
+			// note: we purposely do non-strict equality
+			return (typeof dest === 'object' ? dest.valueOf() : dest) == (typeof src === 'object' ? src.valueOf() : src);
+		};
 	} else if (typeof compareFn !== 'function') {
 		throw new TypeError('Expected compare callback to be a function');
 	}
@@ -415,7 +418,7 @@ gawk.set = function set(dest, src, compareFn) {
 							srcValue = gawk.mergeDeep(gawk(Array.isArray(srcValue) ? [] : {}), srcValue);
 							copyListeners(srcValue, destValue);
 						}
-					} else if (srcValue === destValue) {
+					} else if (compareFn(destValue, srcValue)) {
 						destCopy.splice(j, 1);
 					}
 				}

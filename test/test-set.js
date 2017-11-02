@@ -134,12 +134,47 @@ describe('gawk.set()', () => {
 		expect(count3).to.equal(0);
 	});
 
-	it('should copy an array using default compare function', () => {
+	it('should copy an array of strings using default compare function', () => {
 		const src = [ 'c', 'a' ];
 		const dest = gawk.set(gawk([ 'a', 'b' ]), src);
 		expect(isGawked(dest)).to.be.true;
 		expect(dest).to.deep.equal(src);
 	});
+
+	it('should copy an array of objects using default compare function', () => {
+		class Letter {
+			constructor(letter) {
+				this.letter = letter;
+			}
+
+			valueOf() {
+				return this.letter;
+			}
+		}
+
+		const src = [ new Letter('c'), new Letter('a') ];
+		const dest = gawk.set(gawk([ new Letter('a'), new Letter('b') ]), src);
+		expect(isGawked(dest)).to.be.true;
+		expect(dest).to.deep.equal(src);
+	});
+
+	it('should copy an array of strings and objects using default compare function', () => {
+		class Letter {
+			constructor(letter) {
+				this.letter = letter;
+			}
+
+			valueOf() {
+				return this.letter;
+			}
+		}
+
+		const src = [ new Letter('c'), 'a' ];
+		const dest = gawk.set(gawk([ new Letter('a'), 'b' ]), src);
+		expect(isGawked(dest)).to.be.true;
+		expect(dest).to.deep.equal(src);
+	});
+
 
 	it('should call compare function to check objects', () => {
 		const dest = gawk([ { a: 1 } ]);

@@ -348,8 +348,10 @@ function notify(gobj, source) {
  *
  * @param {Object|Array} dest - A gawked object to copy the listeners to.
  * @param {Object|Array} src - An object to copy the listeners from.
+ * @param {Function} [compareFn] - Doubles up as a deep copy flag and a function to call to compare
+ * a source and destination array elements to check if they are the same.
  */
-function copyListeners(dest, src) {
+function copyListeners(dest, src, compareFn) {
 	if (isGawked(src) && src.__gawk__.listeners) {
 		if (dest.__gawk__.listeners) {
 			for (const [ listener, filter ] of src.__gawk__.listeners) {
@@ -357,6 +359,37 @@ function copyListeners(dest, src) {
 			}
 		} else {
 			dest.__gawk__.listeners = new Map(src.__gawk__.listeners);
+		}
+	}
+
+	if (!compareFn) {
+		return;
+	}
+
+	if (Array.isArray(dest)) {
+		const visited = [];
+		for (let i = 0, len = dest.length; i < len; i++) {
+			if (dest[i] !== null && typeof dest[i] === 'object') {
+				// try to find a match in src
+				for (let j = 0, len2 = src.length; j < len2; j++) {
+					if (!visited[j] && src[j] !== null && typeof src[j] === 'object' && compareFn(dest[i], src[j])) {
+						visited[j] = 1;
+						copyListeners(dest[i], src[j], compareFn);
+						break;
+					}
+				}
+			}
+		}
+		return;
+	}
+
+	for (const key of Object.getOwnPropertyNames(dest)) {
+		if (key === '__gawk__') {
+			continue;
+		}
+
+		if (dest[key] && typeof dest[key] === 'object') {
+			copyListeners(dest[key], src[key], compareFn);
 		}
 	}
 }
@@ -367,8 +400,8 @@ function copyListeners(dest, src) {
  *
  * @param {Object|Array} dest - The destination gawked object or array.
  * @param {Object|Array} src - The source object or array.
- * @param {Function} [compareFn] - A function to call to compare a source and destination to check if
- * they are the same.
+ * @param {Function} [compareFn] - A function to call to compare a source and destination to check
+ * if they are the same.
  * @returns {Object|Array} Returns the destination gawked object.
  */
 gawk.set = function set(dest, src, compareFn) {
@@ -402,33 +435,23 @@ gawk.set = function set(dest, src, compareFn) {
 				throw new Error('Source is an array and expected dest to also be an array');
 			}
 
-			const destCopy = [ ...dest ];
-			const tmp = [];
+			const visisted = [];
 
 			for (let i = 0, len = src.length; i < len; i++) {
-				let srcValue = src[i];
-				const srcValueIsObject = srcValue !== null && typeof srcValue === 'object';
-
-				for (let j = 0; j < destCopy.length; j++) {
-					const destValue = destCopy[j];
-
-					if (srcValueIsObject && destValue !== null && typeof destValue === 'object') {
-						if (compareFn(destValue, srcValue)) {
-							destCopy.splice(j, 1);
-							srcValue = gawk.mergeDeep(gawk(Array.isArray(srcValue) ? [] : {}), srcValue);
-							copyListeners(srcValue, destValue);
+				if (src[i] !== null && typeof src[i] === 'object') {
+					src[i] = gawk(src[i]);
+					// try to find a match in dest
+					for (let j = 0, len2 = dest.length; j < len2; j++) {
+						if (!visisted[j] && dest[j] !== null && typeof dest[j] === 'object' && compareFn(dest[j], src[i])) {
+							visisted[j] = 1;
+							copyListeners(src[i], dest[j], compareFn);
+							break;
 						}
-					} else if (compareFn(destValue, srcValue)) {
-						destCopy.splice(j, 1);
 					}
 				}
-
-				tmp.push(srcValue);
 			}
 
-			// replace the contents of dest with that of tmp
-			// note that this will call the proxy method and handle the parent wireup for us
-			dest.splice(0, dest.length, ...tmp);
+			dest.splice(0, dest.length, ...src);
 
 		} else {
 			// istanbul ignore if

@@ -249,4 +249,95 @@ describe('gawk.set()', () => {
 		expect(count1).to.equal(1);
 		expect(count2).to.equal(1);
 	});
+
+	it('should deeply copy listeners', () => {
+		const dest = gawk([]);
+
+		const dest2 = gawk([]);
+
+		const arr1 = [
+			{
+				a: 'i',
+				b: 11,
+				c: [ 'a', 'b', { dd: 'ee' } ],
+				d: 'e',
+				g: 'j',
+				h: false,
+				n: {
+					o: 's',
+					p: 't',
+					q: 'u',
+					r: 'v'
+				}
+			},
+			{
+				a: 'i',
+				b: 65,
+				d: 'f',
+				g: 'k',
+				h: false,
+				n: {
+					o: 'w',
+					p: 'x',
+					q: 'y',
+					r: 'z'
+				}
+			},
+			{
+				a: 'i',
+				b: 92,
+				d: 'm',
+				g: 'l',
+				h: false,
+				n: {
+					o: 'aa',
+					p: 'bb',
+					q: 'cc',
+					r: 'dd'
+				}
+			}
+		];
+
+		const arr2 = [
+			{
+				a: 'i',
+				b: 11,
+				c: [ 'a', 'b', { dd: 'ee' } ],
+				n: {
+					o: 's',
+					p: 't',
+					q: 'u',
+					r: 'v'
+				},
+				d: 'e',
+				g: 'j',
+				h: false
+			},
+			{
+				a: 'i',
+				b: 92,
+				n: {
+					o: 'aa',
+					p: 'bb',
+					q: 'cc',
+					r: 'dd'
+				},
+				d: 'm',
+				g: 'l',
+				h: false
+			}
+		];
+
+		gawk.watch(dest, obj => {
+			gawk.set(dest2, obj);
+		});
+
+		gawk.set(dest, arr1);
+
+		gawk.watch(dest[0].c[2], () => {});
+
+		gawk.set(dest, arr2);
+
+		expect(dest).to.deep.equal(arr2);
+	});
 });

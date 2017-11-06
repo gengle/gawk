@@ -340,4 +340,21 @@ describe('gawk.set()', () => {
 
 		expect(dest).to.deep.equal(arr2);
 	});
+
+	it('should fire listeners only once per set', () => {
+		const gobj = gawk({});
+		let counter = 0;
+
+		gawk.watch(gobj, () => {
+			counter++;
+		});
+
+		gawk.set(gobj, { foo: 'bar', baz: 'pow' });
+		expect(counter).to.equal(1);
+		expect(gobj).to.deep.equal({ foo: 'bar', baz: 'pow' });
+
+		gawk.set(gobj, { foo: 'bar2', baz2: 'pow' });
+		expect(counter).to.equal(2);
+		expect(gobj).to.deep.equal({ foo: 'bar2', baz2: 'pow' });
+	});
 });

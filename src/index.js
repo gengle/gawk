@@ -3,6 +3,7 @@ if (!Error.prepareStackTrace) {
 	require('source-map-support/register');
 }
 
+import equal from 'fast-deep-equal';
 import fs from 'fs';
 
 /**
@@ -163,11 +164,14 @@ export default function gawk(value, parent) {
 
 				/**
 				 * Dispatches change notifications to the listeners.
+				 * @returns {Boolean} Returns `true` if it was already paused.
 				 */
 				pause: function pause() {
 					if (!this.queue) {
 						this.queue = new Set();
+						return false;
 					}
+					return true;
 				},
 
 				/**
@@ -204,9 +208,9 @@ export default function gawk(value, parent) {
 				pop: {
 					configurable: true,
 					value: function pop() {
-						this.__gawk__.pause();
+						const wasPaused = this.__gawk__.pause();
 						const item = origPop.call(this);
-						this.__gawk__.resume();
+						wasPaused || this.__gawk__.resume();
 						return item;
 					}
 				},
@@ -214,9 +218,9 @@ export default function gawk(value, parent) {
 				shift: {
 					configurable: true,
 					value: function shift() {
-						this.__gawk__.pause();
+						const wasPaused = this.__gawk__.pause();
 						const item = origShift.call(this);
-						this.__gawk__.resume();
+						wasPaused || this.__gawk__.resume();
 						return item;
 					}
 				},
@@ -224,7 +228,7 @@ export default function gawk(value, parent) {
 				splice: {
 					configurable: true,
 					value: function splice(start, deleteCount, ...items) {
-						this.__gawk__.pause();
+						const wasPaused = this.__gawk__.pause();
 
 						if (start !== undefined && deleteCount === undefined) {
 							deleteCount = this.length - start;
@@ -243,7 +247,7 @@ export default function gawk(value, parent) {
 							}
 						}
 
-						this.__gawk__.resume();
+						wasPaused || this.__gawk__.resume();
 						return arr;
 					}
 				},
@@ -251,9 +255,9 @@ export default function gawk(value, parent) {
 				unshift: {
 					configurable: true,
 					value: function unshift(...items) {
-						this.__gawk__.pause();
+						const wasPaused = this.__gawk__.pause();
 						const len = origUnshift.apply(this, items.map(item => gawk(item, this)));
-						this.__gawk__.resume();
+						wasPaused || this.__gawk__.resume();
 						return len;
 					}
 				}
@@ -286,7 +290,7 @@ function notify(gobj, source) {
 		source = gobj;
 	}
 
-	// if we're paused, add this object to the list of objects that changed
+	// if we're paused, add this object to the list of objects that may have changed
 	if (state.queue) {
 		state.queue.add(gobj);
 		return;
@@ -417,16 +421,17 @@ gawk.set = function set(dest, src, compareFn) {
 	if (!compareFn) {
 		compareFn = (dest, src) => {
 			// note: we purposely do non-strict equality
-			return (typeof dest === 'object' ? dest.valueOf() : dest) == (typeof src === 'object' ? src.valueOf() : src);
+			return equal(dest, src);
 		};
 	} else if (typeof compareFn !== 'function') {
 		throw new TypeError('Expected compare callback to be a function');
 	}
 
-	const walk = (dest, src, quiet) =>  {
+	const walk = (dest, src, quiet, changed) =>  {
 		// suspend notifications if the dest is a new gawk object
+		let wasPaused = false;
 		if (!quiet) {
-			dest.__gawk__.pause();
+			wasPaused = dest.__gawk__.pause();
 		}
 
 		if (Array.isArray(src)) {
@@ -491,8 +496,13 @@ gawk.set = function set(dest, src, compareFn) {
 		// copy the listeners
 		copyListeners(dest, src);
 
+		// did dest really change? if not, remove it from the queue
+		if (!changed && dest.__gawk__.queue) {
+			dest.__gawk__.queue.delete(dest);
+		}
+
 		// resume and send out change notifications
-		dest.__gawk__.resume();
+		wasPaused || dest.__gawk__.resume();
 
 		return dest;
 	};
@@ -508,7 +518,7 @@ gawk.set = function set(dest, src, compareFn) {
 
 	const gawked = isGawked(dest);
 
-	return walk(gawked ? dest : gawk(dest), src, !gawked);
+	return walk(gawked ? dest : gawk(dest), src, !gawked, !equal(dest, src));
 };
 
 /**

@@ -357,4 +357,37 @@ describe('gawk.set()', () => {
 		expect(counter).to.equal(2);
 		expect(gobj).to.deep.equal({ foo: 'bar2', baz2: 'pow' });
 	});
+
+	it('should only fire events if the values change', () => {
+		const arr = gawk([]);
+		let counter = 0;
+
+		gawk.watch(arr, () => {
+			counter++;
+		});
+
+		gawk.set(arr, [
+			{ id: 'a' },
+			{ id: 'b' },
+			{ id: 'c' },
+			{ id: 'd' }
+		]);
+		expect(counter).to.equal(1);
+
+		gawk.set(arr, [
+			{ id: 'a' },
+			{ id: 'b' },
+			{ id: 'c' },
+			{ id: 'd' }
+		]);
+		expect(counter).to.equal(1);
+
+		gawk.set(arr, [
+			{ id: 'a' },
+			{ id: 'b' },
+			{ id: 'd' },
+			{ id: 'c' }
+		]);
+		expect(counter).to.equal(2);
+	});
 });

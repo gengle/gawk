@@ -29,16 +29,6 @@ if (typeof Reflect !== 'undefined') {
 }
 
 /**
- * Determines if the specified variable is gawked.
- *
- * @param {*} it - The variable to check.
- * @returns {Boolean}
- */
-export function isGawked(it) {
-	return !!(it && typeof it === 'object' && it.__gawk__ && typeof it.__gawk__ === 'object');
-}
-
-/**
  * Creates a gawk object that wraps the specified object.
  *
  * @param {*} value - A value to gawk.
@@ -166,7 +156,7 @@ export default function gawk(value, parent) {
 				 * Dispatches change notifications to the listeners.
 				 * @returns {Boolean} Returns `true` if it was already paused.
 				 */
-				pause: function pause() {
+				pause() {
 					if (!this.queue) {
 						this.queue = new Set();
 						return false;
@@ -177,7 +167,7 @@ export default function gawk(value, parent) {
 				/**
 				 * Unpauses the gawk notifications and sends out any pending notifications.
 				 */
-				resume: function resume() {
+				resume() {
 					if (this.queue) {
 						const queue = this.queue;
 						this.queue = null;
@@ -275,7 +265,64 @@ export default function gawk(value, parent) {
 	return gawked;
 }
 
+gawk.isGawked  = isGawked;
+gawk.merge     = merge;
+gawk.set       = set;
+gawk.mergeDeep = mergeDeep;
+gawk.watch     = watch;
+gawk.unwatch   = unwatch;
+
 export { gawk as gawk };
+
+/**
+ * Determines if the specified variable is gawked.
+ *
+ * @param {*} it - The variable to check.
+ * @returns {Boolean}
+ */
+export function isGawked(it) {
+	return !!(it && typeof it === 'object' && it.__gawk__ && typeof it.__gawk__ === 'object');
+}
+
+/**
+ * Filters the specified gawk object.
+ *
+ * @param {Object} gobj - A gawked object.
+ * @param {Array.<String>} filter - The filter to apply to the gawked object.
+ * @returns {Object}
+ */
+function filterObject(gobj, filter) {
+	let found = true;
+	let obj = gobj;
+
+	// find the value we're interested in
+	for (let i = 0, len = filter.length; obj && typeof obj === 'object' && i < len; i++) {
+		if (!obj.hasOwnProperty(filter[i])) {
+			found = false;
+			obj = undefined;
+			break;
+		}
+		obj = obj[filter[i]];
+	}
+
+	return { found, obj };
+}
+
+/**
+ * Hashes a value quick and dirty.
+ *
+ * @param {*} it - A value to hash.
+ * @returns {Number}
+ */
+function hashValue(it) {
+	const str = JSON.stringify(it) || '';
+	let hash = 5381;
+	let i = str.length;
+	while (i) {
+		hash = hash * 33 ^ str.charCodeAt(--i);
+	}
+	return hash >>> 0;
+}
 
 /**
  * Dispatches change notifications to the listeners.
@@ -300,27 +347,10 @@ function notify(gobj, source) {
 	if (state.listeners) {
 		for (const [ listener, filter ] of state.listeners) {
 			if (filter) {
-				let obj = gobj;
-				let found = true;
-
-				// find the value we're interested in
-				for (let i = 0, len = filter.length; obj && typeof obj === 'object' && i < len; i++) {
-					if (!obj.hasOwnProperty(filter[i])) {
-						found = false;
-						obj = undefined;
-						break;
-					}
-					obj = obj[filter[i]];
-				}
+				const { found, obj } = filterObject(gobj, filter);
 
 				// compute the hash of the stringified value
-				const str = JSON.stringify(obj) || '';
-				let hash = 5381;
-				let i = str.length;
-				while (i) {
-					hash = (hash * 33) ^ str.charCodeAt(--i);
-				}
-				hash = hash >>> 0;
+				const hash = hashValue(obj);
 
 				// check if the value changed
 				if ((found && !state.previous) || (state.previous && hash !== state.previous.get(listener))) {
@@ -408,7 +438,7 @@ function copyListeners(dest, src, compareFn) {
  * if they are the same.
  * @returns {Object|Array} Returns the destination gawked object.
  */
-gawk.set = function set(dest, src, compareFn) {
+export function set(dest, src, compareFn) {
 	if (!dest || typeof dest !== 'object') {
 		throw new TypeError('Expected destination to be an object');
 	}
@@ -519,7 +549,7 @@ gawk.set = function set(dest, src, compareFn) {
 	const gawked = isGawked(dest);
 
 	return walk(gawked ? dest : gawk(dest), src, !gawked, !equal(dest, src));
-};
+}
 
 /**
  * Adds a listener to be called when the specified object or any of its properties/elements are
@@ -530,7 +560,7 @@ gawk.set = function set(dest, src, compareFn) {
  * @param {Function} listener - The function to call when something changes.
  * @returns {Object|Array} Returns a gawked object or array depending on the input object.
  */
-gawk.watch = function watch(subject, filter, listener) {
+export function watch(subject, filter, listener) {
 	if (!isGawked(subject)) {
 		throw new TypeError('Expected subject to be gawked');
 	}
@@ -557,8 +587,19 @@ gawk.watch = function watch(subject, filter, listener) {
 	}
 	subject.__gawk__.listeners.set(listener, filter);
 
+	if (filter) {
+		const { found, obj } = filterObject(subject, filter);
+		if (found) {
+			const hash = hashValue(obj);
+			if (!subject.__gawk__.previous) {
+				subject.__gawk__.previous = new WeakMap();
+			}
+			subject.__gawk__.previous.set(listener, hash);
+		}
+	}
+
 	return subject;
-};
+}
 
 /**
  * Removes a listener from the specified gawked object.
@@ -567,7 +608,7 @@ gawk.watch = function watch(subject, filter, listener) {
  * @param {Function} [listener] - The function to call when something changes.
  * @returns {Object|Array} Returns a gawked object or array depending on the input object.
  */
-gawk.unwatch = function unwatch(subject, listener) {
+export function unwatch(subject, listener) {
 	if (!isGawked(subject)) {
 		throw new TypeError('Expected subject to be gawked');
 	}
@@ -601,7 +642,7 @@ gawk.unwatch = function unwatch(subject, listener) {
 	}
 
 	return subject;
-};
+}
 
 /**
  * Mixes an array of objects or gawked objects into the specified gawked object.
@@ -673,9 +714,9 @@ function mix(objs, deep) {
  * @param {...Object} objs - The destination object followed by one or more objects to merge in.
  * @returns {Object}
  */
-gawk.merge = function merge(...objs) {
+export function merge(...objs) {
 	return mix(objs);
-};
+}
 
 /**
  * Performs a deep merge of one or more objects into the specified gawk object.
@@ -683,6 +724,6 @@ gawk.merge = function merge(...objs) {
  * @param {...Object} objs - The destination object followed by one or more objects to deeply merge in.
  * @returns {Object}
  */
-gawk.mergeDeep = function mergeDeep(...objs) {
+export function mergeDeep(...objs) {
 	return mix(objs, true);
-};
+}

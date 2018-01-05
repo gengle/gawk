@@ -620,4 +620,28 @@ describe('gawk.unwatch()', () => {
 
 		expect(callback).to.be.calledTwice;
 	});
+
+	it('should notify if filtered object changed', () => {
+		const gobj = gawk({ foo: [], bar: [] });
+		const callback = spy();
+
+		expect(gobj.__gawk__.previous).to.be.null;
+
+		gawk.watch(gobj, 'bar', callback);
+
+		gobj.__gawk__.pause();
+
+		gawk.set(gobj.foo, [ 'a' ]);
+		gawk.set(gobj.bar, []);
+
+		gobj.__gawk__.resume();
+
+		expect(callback).to.not.be.called;
+
+		expect(gobj.__gawk__.previous).to.be.a('WeakMap');
+
+		gawk.unwatch(gobj, callback);
+
+		expect(gobj.__gawk__.previous).to.be.null;
+	});
 });

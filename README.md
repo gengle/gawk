@@ -1,5 +1,7 @@
 # gawk
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/cb1kenobi/gawk.svg)](https://greenkeeper.io/)
+
 [![NPM Version][npm-image]][npm-url]
 [![NPM Downloads][downloads-image]][downloads-url]
 [![Travis CI Build][travis-image]][travis-url]

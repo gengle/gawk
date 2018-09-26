@@ -1,11 +1,10 @@
 # gawk
 
-[![Greenkeeper badge](https://badges.greenkeeper.io/cb1kenobi/gawk.svg)](https://greenkeeper.io/)
-
 [![NPM Version][npm-image]][npm-url]
 [![NPM Downloads][downloads-image]][downloads-url]
 [![Travis CI Build][travis-image]][travis-url]
 [![Test Coverage][coveralls-image]][coveralls-url]
+[![Greenkeeper badge][greenkeeper-image]][greenkeeper-url]
 [![Deps][david-image]][david-url]
 [![Dev Deps][david-dev-image]][david-dev-url]
 
@@ -256,6 +255,8 @@ MIT
 [travis-url]: https://travis-ci.org/cb1kenobi/gawk
 [coveralls-image]: https://img.shields.io/coveralls/cb1kenobi/gawk/master.svg
 [coveralls-url]: https://coveralls.io/r/cb1kenobi/gawk
+[greenkeeper-image]: https://badges.greenkeeper.io/cb1kenobi/gawk.svg
+[greenkeeper-url]: https://greenkeeper.io/
 [david-image]: https://img.shields.io/david/cb1kenobi/gawk.svg
 [david-url]: https://david-dm.org/cb1kenobi/gawk
 [david-dev-image]: https://img.shields.io/david/dev/cb1kenobi/gawk.svg

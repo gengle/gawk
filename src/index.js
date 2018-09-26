@@ -56,17 +56,18 @@ export default function gawk(value, parent) {
 	} else {
 		// gawk it!
 		gawked = new Proxy(value, {
-			set: (target, prop, value) => {
+			set: (target, prop, newValue) => {
 				if (prop === '__gawk__') {
 					throw new Error('Cannot override property \'__gawk__\'');
 				}
 
-				// console.log('setting', prop, value);
+				// console.log('setting', prop, newValue);
 
 				let changed = true;
+				const desc = Object.getOwnPropertyDescriptor(target, prop);
 
-				if (Object.prototype.hasOwnProperty.call(target, prop)) {
-					changed = target[prop] !== value;
+				if (desc) {
+					changed = target[prop] !== newValue;
 					const parents = isGawked(target[prop]) && target[prop].__gawk__.parents;
 					if (parents) {
 						parents.delete(gawked);
@@ -74,12 +75,15 @@ export default function gawk(value, parent) {
 							target[prop].__gawk__.parents = null;
 						}
 					}
-					if (!Array.isArray(target) || prop !== 'length') {
+
+					// if the destination property has a setter, then we can't assume we need to
+					// fire a delete
+					if (typeof desc.set !== 'function' && (!Array.isArray(target) || prop !== 'length')) {
 						delete target[prop];
 					}
 				}
 
-				target[prop] = gawk(value, gawked);
+				target[prop] = gawk(newValue, gawked);
 
 				if (changed) {
 					notify(gawked);

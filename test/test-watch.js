@@ -644,4 +644,29 @@ describe('gawk.unwatch()', () => {
 
 		expect(gobj.__gawk__.previous).to.be.null;
 	});
+
+	it('should notify when a getter/setter property is changed', () => {
+		const obj = Object.defineProperty({}, 'foo', {
+			configurable: true,
+			enumerable: true,
+			get() {
+				return this._foo;
+			},
+			set(value) {
+				this._foo = value.toUpperCase();
+			}
+		});
+
+		obj.foo = 'bar';
+
+		const gobj = gawk(obj);
+		expect(gobj.foo).to.equal('BAR');
+
+		const callback = spy();
+		gawk.watch(gobj, callback);
+
+		gobj.foo = 'baz';
+		expect(callback).to.be.calledOnce;
+		expect(gobj.foo).to.equal('BAZ');
+	});
 });

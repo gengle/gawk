@@ -14,21 +14,27 @@
         "sourceType": "module"
     },
     "plugins": [
+        "chai-expect",
+        "mocha",
         "security"
     ],
     "root": true,
     "rules": {
-        "array-bracket-spacing": [ "error", "always" ],
+        "array-bracket-spacing": [ "error", "always", { "objectsInArrays": true, "arraysInArrays": true } ],
         "brace-style": [ 2, "1tbs", { "allowSingleLine": true } ],
         "camelcase": 0,
+        "chai-expect/missing-assertion": 2,
+        "chai-expect/terminating-properties": 1,
         "curly": [ 2, "all" ],
         "eol-last": 2,
         "indent": [ 2, "tab", { "SwitchCase": 1 } ],
         "keyword-spacing": [ "error" ],
         "linebreak-style": [ 2, "unix" ],
+        "max-len": [ 2, 200 ],
         "no-case-declarations": 0,
         "no-cond-assign": 0,
         "no-console": 0,
+        "no-control-regex": 0,
         "no-empty": 1,
         "no-inner-declarations": 0,
         "no-mixed-spaces-and-tabs": 2,

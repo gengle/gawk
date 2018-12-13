@@ -3,6 +3,7 @@
 [![NPM Version][npm-image]][npm-url]
 [![NPM Downloads][downloads-image]][downloads-url]
 [![Travis CI Build][travis-image]][travis-url]
+[![Appveyor CI Build][appveyor-image]][appveyor-url]
 [![Test Coverage][coveralls-image]][coveralls-url]
 [![Greenkeeper badge][greenkeeper-image]][greenkeeper-url]
 [![Deps][david-image]][david-url]
@@ -24,7 +25,7 @@ functions such as `JSON.stringify()` work as expected.
 
 ## Examples
 
-```javascript
+```js
 import gawk from 'gawk';
 
 const obj = gawk({
@@ -43,7 +44,7 @@ console.info(obj); // { foo: 'baz' }
 
 You can also be notified if a deep child is changed:
 
-```javascript
+```js
 const obj = gawk({
     foo: {
         bar: ['a', 'b']
@@ -63,7 +64,7 @@ console.info(obj); // { foo: { bar: ['a', 'b', 'c', 'd'] } }
 To filter watch notifications, simply pass in the property name or array of
 property names used to filter the gawk object.
 
-```javascript
+```js
 const obj = gawk({
 	foo: {
 		bar: 'hello'
@@ -79,7 +80,7 @@ obj.foo.bar = 'world!';
 
 To stop watching, simply call `gawk.unwatch()` with the original listener function.
 
-```javascript
+```js
 const obj = gawk({ /* ... */ });
 
 function onChange(obj, src) {
@@ -97,7 +98,7 @@ obj.foo = 'baz'; // does not fire onChange()
 
 To update an object and preserve the listeners, you can use the `gawk.set()` function.
 
-```javascript
+```js
 const obj = gawk({
 	foo: 'bar'
 });
@@ -251,10 +252,12 @@ MIT
 [npm-url]: https://npmjs.org/package/gawk
 [downloads-image]: https://img.shields.io/npm/dm/gawk.svg
 [downloads-url]: https://npmjs.org/package/gawk
-[travis-image]: https://img.shields.io/travis/cb1kenobi/gawk.svg
+[travis-image]: https://travis-ci.org/cb1kenobi/gawk.svg?branch=master
 [travis-url]: https://travis-ci.org/cb1kenobi/gawk
 [coveralls-image]: https://img.shields.io/coveralls/cb1kenobi/gawk/master.svg
 [coveralls-url]: https://coveralls.io/r/cb1kenobi/gawk
+[appveyor-image]: https://ci.appveyor.com/api/projects/status/1ee7r1drlswy5jk6?svg=true
+[appveyor-url]: https://ci.appveyor.com/project/cb1kenobi/gawk
 [greenkeeper-image]: https://badges.greenkeeper.io/cb1kenobi/gawk.svg
 [greenkeeper-url]: https://greenkeeper.io/
 [david-image]: https://img.shields.io/david/cb1kenobi/gawk.svg

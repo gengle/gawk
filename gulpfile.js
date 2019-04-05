@@ -26,7 +26,7 @@ exports.clean = parallel(cleanCoverage, cleanDist, cleanDocs);
 /*
  * lint tasks
  */
-async function lint(pattern) {
+function lint(pattern) {
 	return gulp.src(pattern)
 		.pipe($.plumber())
 		.pipe($.eslint())

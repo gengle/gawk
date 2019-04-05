@@ -184,7 +184,7 @@ export default function gawk(value, parent) {
 		});
 
 		// gawk any object properties
-		for (const key of Object.getOwnPropertyNames(gawked)) {
+		for (const key of Reflect.ownKeys(gawked)) {
 			if (key !== '__gawk__' && gawked[key] && typeof gawked[key] === 'object') {
 				gawked[key] = gawk(gawked[key], gawked);
 			}

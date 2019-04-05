@@ -669,4 +669,25 @@ describe('gawk.unwatch()', () => {
 		expect(callback).to.be.calledOnce;
 		expect(gobj.foo).to.equal('BAZ');
 	});
+
+	it('should notify when a symbol property value changes', () => {
+		const s = Symbol();
+		const gobj = gawk({
+			foo: {
+				name: 'foo'
+			},
+			[s]: {
+				name: 'symbol'
+			}
+		});
+		const callback = spy();
+
+		gawk.watch(gobj, callback);
+
+		gobj.foo.name = 'foo!';
+		expect(callback).to.be.calledOnce;
+
+		gobj[s].name = 'symbol!';
+		expect(callback).to.be.calledTwice;
+	});
 });

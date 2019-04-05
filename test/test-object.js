@@ -108,6 +108,21 @@ describe('gawk() object', () => {
 		expect(isGawked(gobj)).to.be.true;
 	});
 
+	it('should gawk object with symbol keys', () => {
+		const s = Symbol();
+		const gobj = gawk({
+			foo: {
+				name: 'foo!'
+			},
+			[s]: {
+				name: 'symbol!'
+			}
+		});
+		expect(isGawked(gobj)).to.be.true;
+		expect(gobj.foo).to.deep.equal({ name: 'foo!' });
+		expect(gobj[s]).to.deep.equal({ name: 'symbol!' });
+	});
+
 	it('should not allow __gawk__ to be set', () => {
 		const gobj = gawk({});
 		expect(isGawked(gobj)).to.be.true;

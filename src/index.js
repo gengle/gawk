@@ -101,7 +101,7 @@ export default function gawk(value, parent) {
 
 				let result = true;
 
-				if (target.hasOwnProperty(prop)) {
+				if (Object.prototype.hasOwnProperty.call(target, prop)) {
 					const parents = isGawked(target[prop]) && target[prop].__gawk__.parents;
 					if (parents) {
 						parents.delete(gawked);
@@ -301,7 +301,7 @@ function filterObject(gobj, filter) {
 
 	// find the value we're interested in
 	for (let i = 0, len = filter.length; obj && typeof obj === 'object' && i < len; i++) {
-		if (!obj.hasOwnProperty(filter[i])) {
+		if (!Object.prototype.hasOwnProperty.call(obj, filter[i])) {
 			found = false;
 			obj = undefined;
 			break;
@@ -515,7 +515,7 @@ export function set(dest, src, compareFn) {
 
 				// create a new dest object to copy the source into
 				const destValue = gawk(Array.isArray(srcValue) ? [] : {});
-				tmp[key] = walk(destValue, srcValue, !dest.hasOwnProperty(key));
+				tmp[key] = walk(destValue, srcValue, !Object.prototype.hasOwnProperty.call(dest, key));
 			}
 
 			// prune the existing object, then copy all the properties from our temp object

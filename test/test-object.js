@@ -1,3 +1,5 @@
+/* eslint-disable no-prototype-builtins */
+
 import gawk, { Gawk, isGawked } from '../dist/index';
 
 import { EventEmitter } from 'events';

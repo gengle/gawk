@@ -390,4 +390,14 @@ describe('gawk.set()', () => {
 		]);
 		expect(counter).to.equal(2);
 	});
+
+	it('should set an object with a symbol property', () => {
+		const id = Symbol();
+
+		const gobj = gawk({ [id]: 'foo' });
+		expect(gobj).to.deep.equal({ [id]: 'foo' });
+
+		gawk.set(gobj, { [id]: 'bar' });
+		expect(gobj).to.deep.equal({ [id]: 'bar' });
+	});
 });

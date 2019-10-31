@@ -26,9 +26,8 @@ exports.clean = parallel(cleanCoverage, cleanDist, cleanDocs);
 /*
  * lint tasks
  */
-function lint(pattern) {
+async function lint(pattern) {
 	return gulp.src(pattern)
-		.pipe($.plumber())
 		.pipe($.eslint())
 		.pipe($.eslint.format())
 		.pipe($.eslint.failAfterError());
@@ -89,7 +88,7 @@ exports.docs = series(parallel(cleanDocs, lintSrc), async () => {
 /*
  * test tasks
  */
-async function runTests(cover) {
+function runTests(cover) {
 	const args = [];
 	let { execPath } = process;
 
@@ -184,7 +183,9 @@ function resolveModule(name) {
 	}
 }
 
-exports.test             = series(parallel(lintTest, build),                function test() { return runTests(); });
-exports['test-only']     = series(lintTest,                                 function test() { return runTests(); });
-exports.coverage         = series(parallel(cleanCoverage, lintTest, build), function test() { return runTests(true); });
-exports['coverage-only'] = series(parallel(cleanCoverage, lintTest),        function test() { return runTests(true); });
+exports.test             = series(lintTest, build,                async function test() { return runTests(); });
+exports['test-only']     = series(lintTest,                       async function test() { return runTests(); });
+exports.coverage         = series(cleanCoverage, lintTest, build, async function test() { return runTests(true); });
+exports['coverage-only'] = series(cleanCoverage, lintTest,        async function test() { return runTests(true); });
+
+process.on('uncaughtException', () => {});

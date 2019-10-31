@@ -243,6 +243,17 @@ describe('set property', () => {
 
 		expect(gobj).to.deep.equal({ foo: 'bar' });
 	});
+
+	it('should set a symbol property', () => {
+		const id = Symbol();
+
+		const gobj = gawk({});
+		gobj[id] = 'foo';
+		expect(gobj).to.deep.equal({ [id]: 'foo' });
+
+		gobj[id] = 'bar';
+		expect(gobj).to.deep.equal({ [id]: 'bar' });
+	});
 });
 
 describe('delete property', () => {
@@ -281,6 +292,17 @@ describe('Object.keys()', () => {
 		expect(keys).to.be.an('array');
 		expect(keys).to.have.lengthOf(2);
 		expect(keys).to.deep.equal([ 'foo', 'pi' ]);
+	});
+});
+
+describe('Object.getOwnPropertySymbols()', () => {
+	it('should return an array of symbol keys in the object', () => {
+		const id = Symbol();
+
+		const gobj = gawk({ [id]: 'foo' });
+		expect(gobj).to.deep.equal({ [id]: 'foo' });
+
+		expect(Object.getOwnPropertySymbols(gobj)).to.deep.equal([ id ]);
 	});
 });
 
@@ -369,6 +391,16 @@ describe('gawk.merge()', () => {
 		expect(gobj).to.deep.equal({ foo: { pi: 3.14 }});
 		expect(isGawked(gobj.foo)).to.be.true;
 		expect(gobj.foo.__gawk__.parents.has(gobj)).to.be.true;
+	});
+
+	it('should merge an object with a symbol property', () => {
+		const id = Symbol();
+
+		const gobj = gawk({ [id]: 'foo' });
+		expect(gobj).to.deep.equal({ [id]: 'foo' });
+
+		gawk.merge(gobj, { [id]: 'bar' });
+		expect(gobj).to.deep.equal({ [id]: 'bar' });
 	});
 });
 

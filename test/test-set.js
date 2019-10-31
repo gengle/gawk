@@ -391,13 +391,25 @@ describe('gawk.set()', () => {
 		expect(counter).to.equal(2);
 	});
 
-	it('should set an object with a symbol property', () => {
+	it('should set an existing object with a symbol property', () => {
+		const id = Symbol();
+
+		const gobj = gawk({});
+
+		gawk.set(gobj, { [id]: 'foo' });
+		expect(Object.getOwnPropertySymbols(gobj)).to.deep.equal([ id ]);
+		expect(gobj[id]).to.equal('foo');
+	});
+
+	it('should set an existing object with a symbol property', () => {
 		const id = Symbol();
 
 		const gobj = gawk({ [id]: 'foo' });
-		expect(gobj).to.deep.equal({ [id]: 'foo' });
+		expect(Object.getOwnPropertySymbols(gobj)).to.deep.equal([ id ]);
+		expect(gobj[id]).to.equal('foo');
 
 		gawk.set(gobj, { [id]: 'bar' });
-		expect(gobj).to.deep.equal({ [id]: 'bar' });
+		expect(Object.getOwnPropertySymbols(gobj)).to.deep.equal([ id ]);
+		expect(gobj[id]).to.equal('bar');
 	});
 });

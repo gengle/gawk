@@ -249,10 +249,12 @@ describe('set property', () => {
 
 		const gobj = gawk({});
 		gobj[id] = 'foo';
-		expect(gobj).to.deep.equal({ [id]: 'foo' });
+		expect(Object.getOwnPropertySymbols(gobj)).to.deep.equal([ id ]);
+		expect(gobj[id]).to.equal('foo');
 
 		gobj[id] = 'bar';
-		expect(gobj).to.deep.equal({ [id]: 'bar' });
+		expect(Object.getOwnPropertySymbols(gobj)).to.deep.equal([ id ]);
+		expect(gobj[id]).to.equal('bar');
 	});
 });
 
@@ -296,13 +298,22 @@ describe('Object.keys()', () => {
 });
 
 describe('Object.getOwnPropertySymbols()', () => {
-	it('should return an array of symbol keys in the object', () => {
+	it('should return an array of symbol keys in empty object', () => {
+		const id = Symbol();
+
+		const gobj = gawk({});
+		expect(Object.getOwnPropertySymbols(gobj)).to.deep.equal([]);
+
+		gobj[id] = 'foo';
+		expect(Object.getOwnPropertySymbols(gobj)).to.deep.equal([ id ]);
+	});
+
+	it('should return an array of symbol keys from initialized object', () => {
 		const id = Symbol();
 
 		const gobj = gawk({ [id]: 'foo' });
-		expect(gobj).to.deep.equal({ [id]: 'foo' });
-
 		expect(Object.getOwnPropertySymbols(gobj)).to.deep.equal([ id ]);
+		expect(gobj[id]).to.equal('foo');
 	});
 });
 
@@ -396,11 +407,14 @@ describe('gawk.merge()', () => {
 	it('should merge an object with a symbol property', () => {
 		const id = Symbol();
 
-		const gobj = gawk({ [id]: 'foo' });
-		expect(gobj).to.deep.equal({ [id]: 'foo' });
+		const gobj = gawk({});
+		gobj[id] = 'foo';
+		expect(Object.getOwnPropertySymbols(gobj)).to.deep.equal([ id ]);
+		expect(gobj[id]).to.equal('foo');
 
 		gawk.merge(gobj, { [id]: 'bar' });
-		expect(gobj).to.deep.equal({ [id]: 'bar' });
+		expect(Object.getOwnPropertySymbols(gobj)).to.deep.equal([ id ]);
+		expect(gobj[id]).to.equal('bar');
 	});
 });
 

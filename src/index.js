@@ -421,7 +421,7 @@ function copyListeners(dest, src, compareFn) {
 		return;
 	}
 
-	for (const key of Object.getOwnPropertyNames(dest)) {
+	for (const key of [ ...Object.getOwnPropertySymbols(dest), ...Object.getOwnPropertyNames(dest) ]) {
 		if (key === '__gawk__') {
 			continue;
 		}
@@ -500,7 +500,7 @@ export function set(dest, src, compareFn) {
 
 			const tmp = {};
 
-			for (const key of Object.getOwnPropertyNames(src)) {
+			for (const key of [ ...Object.getOwnPropertySymbols(src), ...Object.getOwnPropertyNames(src) ]) {
 				if (key === '__gawk__') {
 					continue;
 				}
@@ -519,7 +519,7 @@ export function set(dest, src, compareFn) {
 			}
 
 			// prune the existing object, then copy all the properties from our temp object
-			for (const key of Object.getOwnPropertyNames(dest)) {
+			for (const key of [ ...Object.getOwnPropertySymbols(dest), ...Object.getOwnPropertyNames(dest) ]) {
 				if (key !== '__gawk__') {
 					delete dest[key];
 				}
@@ -682,7 +682,7 @@ function mix(objs, deep) {
 	 * @param {Object} src - The source object to copy from.
 	 */
 	const mixer = (gobj, src) => {
-		for (const key of Object.getOwnPropertyNames(src)) {
+		for (const key of [ ...Object.getOwnPropertySymbols(src), ...Object.getOwnPropertyNames(src) ]) {
 			if (key === '__gawk__') {
 				continue;
 			}

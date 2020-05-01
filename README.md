@@ -5,7 +5,6 @@
 [![Travis CI Build][travis-image]][travis-url]
 [![Appveyor CI Build][appveyor-image]][appveyor-url]
 [![Test Coverage][coveralls-image]][coveralls-url]
-[![Greenkeeper badge][greenkeeper-image]][greenkeeper-url]
 [![Deps][david-image]][david-url]
 [![Dev Deps][david-dev-image]][david-dev-url]
 
@@ -258,8 +257,6 @@ MIT
 [coveralls-url]: https://coveralls.io/r/cb1kenobi/gawk
 [appveyor-image]: https://ci.appveyor.com/api/projects/status/1ee7r1drlswy5jk6?svg=true
 [appveyor-url]: https://ci.appveyor.com/project/cb1kenobi/gawk
-[greenkeeper-image]: https://badges.greenkeeper.io/cb1kenobi/gawk.svg
-[greenkeeper-url]: https://greenkeeper.io/
 [david-image]: https://img.shields.io/david/cb1kenobi/gawk.svg
 [david-url]: https://david-dm.org/cb1kenobi/gawk
 [david-dev-image]: https://img.shields.io/david/dev/cb1kenobi/gawk.svg

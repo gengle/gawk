@@ -1,6 +1,6 @@
 /* eslint-disable no-prototype-builtins */
 
-import gawk, { Gawk, isGawked } from '../dist/index';
+import gawk, { isGawked } from '../dist/index';
 
 import { EventEmitter } from 'events';
 
@@ -485,5 +485,23 @@ describe('gawk.mergeDeep()', () => {
 
 		expect(isGawked(gobj.foo.biz)).to.be.true;
 		expect(gobj.foo.biz.__gawk__.parents.has(gobj.foo)).to.be.true;
+	});
+
+	it('should gawk an object with a non-configurable, non-enumerable property', () => {
+		const obj = {
+			foo: 'bar'
+		};
+
+		Object.defineProperty(obj, 'baz', {
+			value: {
+				pow: 'wiz'
+			}
+		});
+
+		const gobj = gawk(obj);
+		expect(JSON.parse(JSON.stringify(gobj))).to.deep.equal({ foo: 'bar' });
+		expect(gobj.foo).to.equal('bar');
+		expect(gobj.baz).to.deep.equal({ pow: 'wiz' });
+		expect(gobj.baz.pow).to.equal('wiz');
 	});
 });

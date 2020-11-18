@@ -3,6 +3,7 @@
 import gawk, { isGawked } from '../dist/index';
 
 import { EventEmitter } from 'events';
+import { expect } from 'chai';
 
 const version = require('./../package.json').version;
 
@@ -256,6 +257,84 @@ describe('set property', () => {
 		expect(Object.getOwnPropertySymbols(gobj)).to.deep.equal([ id ]);
 		expect(gobj[id]).to.equal('bar');
 	});
+
+	it('should set an object with a configurable, enumerable, writable property', () => {
+		const obj = {
+			foo: 'bar'
+		};
+
+		Object.defineProperty(obj, 'baz', {
+			configurable: true,
+			enumerable: true,
+			value: {
+				pow: 'wiz'
+			},
+			writable: true
+		});
+
+		const gobj = gawk(obj);
+		expect(JSON.parse(JSON.stringify(gobj))).to.deep.equal({ foo: 'bar', baz: { pow: 'wiz' } });
+		expect(gobj.foo).to.equal('bar');
+		expect(gobj.baz).to.deep.equal({ pow: 'wiz' });
+		expect(gobj.baz.pow).to.equal('wiz');
+
+		gobj.baz = 'bam';
+		expect(JSON.parse(JSON.stringify(gobj))).to.deep.equal({ foo: 'bar', baz: 'bam' });
+		expect(gobj.foo).to.equal('bar');
+		expect(gobj.baz).to.equal('bam');
+	});
+
+	it('should set an object with a configurable, enumerable, read-only property', () => {
+		const obj = {
+			foo: 'bar'
+		};
+
+		Object.defineProperty(obj, 'baz', {
+			configurable: true,
+			enumerable: true,
+			value: {
+				pow: 'wiz'
+			},
+			writable: false
+		});
+
+		const gobj = gawk(obj);
+		expect(JSON.parse(JSON.stringify(gobj))).to.deep.equal({ foo: 'bar', baz: { pow: 'wiz' } });
+		expect(gobj.foo).to.equal('bar');
+		expect(gobj.baz).to.deep.equal({ pow: 'wiz' });
+		expect(gobj.baz.pow).to.equal('wiz');
+
+		gobj.baz = 'bam';
+		expect(JSON.parse(JSON.stringify(gobj))).to.deep.equal({ foo: 'bar', baz: { pow: 'wiz' } });
+		expect(gobj.foo).to.equal('bar');
+		expect(gobj.baz).to.deep.equal({ pow: 'wiz' });
+		expect(gobj.baz.pow).to.equal('wiz');
+	});
+
+	it('should set an object with a non-configurable, non-enumerable, read-only property', () => {
+		const obj = {
+			foo: 'bar'
+		};
+
+		Object.defineProperty(obj, 'baz', {
+			configurable: false,
+			enumerable: false,
+			value: {
+				pow: 'wiz'
+			},
+			writable: false
+		});
+
+		const gobj = gawk(obj);
+		expect(JSON.parse(JSON.stringify(gobj))).to.deep.equal({ foo: 'bar' });
+		expect(gobj.foo).to.equal('bar');
+		expect(gobj.baz).to.deep.equal({ pow: 'wiz' });
+		expect(gobj.baz.pow).to.equal('wiz');
+
+		expect(() => {
+			gobj.baz = 'bam';
+		}).to.throw(TypeError, /'set' on proxy/);
+	});
 });
 
 describe('delete property', () => {
@@ -486,22 +565,43 @@ describe('gawk.mergeDeep()', () => {
 		expect(isGawked(gobj.foo.biz)).to.be.true;
 		expect(gobj.foo.biz.__gawk__.parents.has(gobj.foo)).to.be.true;
 	});
+});
 
-	it('should gawk an object with a non-configurable, non-enumerable property', () => {
+describe('revoke', () => {
+	it('should revoke the proxy', () => {
 		const obj = {
-			foo: 'bar'
+			foo: {
+				bar: 'baz'
+			}
 		};
 
-		Object.defineProperty(obj, 'baz', {
-			value: {
-				pow: 'wiz'
+		const gobj = gawk(obj);
+
+		expect(gobj).to.not.equal(obj);
+		expect(gobj).to.deep.equal(obj);
+
+		gobj.foo.bar = 'wiz';
+		expect(gobj).to.deep.equal({
+			foo: {
+				bar: 'wiz'
+			}
+		});
+		expect(obj).to.deep.equal({
+			foo: {
+				bar: 'wiz'
 			}
 		});
 
-		const gobj = gawk(obj);
-		expect(JSON.parse(JSON.stringify(gobj))).to.deep.equal({ foo: 'bar' });
-		expect(gobj.foo).to.equal('bar');
-		expect(gobj.baz).to.deep.equal({ pow: 'wiz' });
-		expect(gobj.baz.pow).to.equal('wiz');
+		gobj.__gawk__.revoke();
+
+		expect(() => {
+			gobj.foo.bar = 'bam';
+		}).to.throw(TypeError, 'Cannot perform \'get\' on a proxy that has been revoked');
+
+		expect(obj).to.deep.equal({
+			foo: {
+				bar: 'wiz'
+			}
+		});
 	});
 });

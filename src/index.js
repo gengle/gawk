@@ -93,6 +93,14 @@ export default function gawk(value, parent) {
 				const desc = Object.getOwnPropertyDescriptor(target, prop);
 
 				if (desc) {
+					if (desc.writable === false) {
+						// if both writable and configurable are false, then returning anything
+						// will cause an error because without proxies, setting a non-writable
+						// property has no effect, but attempting to set a proxied non-writable
+						// property is a TypeError
+						return true;
+					}
+
 					changed = target[prop] !== newValue;
 					const parents = isGawked(target[prop]) && target[prop].__gawk__.parents;
 					if (parents) {
@@ -104,12 +112,19 @@ export default function gawk(value, parent) {
 
 					// if the destination property has a setter, then we can't assume we need to
 					// fire a delete
-					if (typeof desc.set !== 'function' && (!Array.isArray(target) || prop !== 'length')) {
-						delete target[prop];
-					}
-				}
+					if (typeof desc.set === 'function') {
+						target[prop] = gawk(newValue, gawked);
 
-				target[prop] = gawk(newValue, gawked);
+					} else {
+						if (!Array.isArray(target) || prop !== 'length') {
+							delete target[prop];
+						}
+						desc.value = gawk(newValue, gawked);
+						Object.defineProperty(target, prop, desc);
+					}
+				} else {
+					target[prop] = gawk(newValue, gawked);
+				}
 
 				if (changed) {
 					notify(gawked);
@@ -182,7 +197,7 @@ export default function gawk(value, parent) {
 				},
 
 				/**
-				 * Removes the proxy from this object.
+				 * Makes this gawked proxy unusable.
 				 */
 				revoke: revocable.revoke
 			}
@@ -191,9 +206,11 @@ export default function gawk(value, parent) {
 		// gawk any object properties
 		for (const key of Reflect.ownKeys(gawked)) {
 			if (key !== '__gawk__' && gawked[key] && typeof gawked[key] === 'object') {
+				// desc should always be an object since we know the key exists
 				const desc = Object.getOwnPropertyDescriptor(gawked, key);
-				if (!desc || desc.configurable !== false) {
-					gawked[key] = gawk(gawked[key], gawked);
+				if (desc && desc.configurable !== false) {
+					desc.value = gawk(gawked[key], gawked);
+					Object.defineProperty(gawked, key, desc);
 				}
 			}
 		}

@@ -55,8 +55,34 @@ export default function gawk(value, parent) {
 		gawked = value;
 	} else {
 		// gawk it!
-		gawked = new Proxy(value, {
-			set: (target, prop, newValue) => {
+		const revocable = Proxy.revocable(value, {
+			deleteProperty(target, prop) {
+				if (prop === '__gawk__') {
+					throw new Error('Cannot delete property \'__gawk__\'');
+				}
+
+				// console.log('deleting', prop, target[prop]);
+
+				if (!Object.prototype.hasOwnProperty.call(target, prop)) {
+					return true;
+				}
+
+				const parents = isGawked(target[prop]) && target[prop].__gawk__.parents;
+				if (parents) {
+					parents.delete(gawked);
+					if (!parents.size) {
+						target[prop].__gawk__.parents = null;
+					}
+				}
+
+				const result = delete target[prop];
+				if (result) {
+					notify(gawked);
+				}
+				return result;
+			},
+
+			set(target, prop, newValue) {
 				if (prop === '__gawk__') {
 					throw new Error('Cannot override property \'__gawk__\'');
 				}
@@ -67,6 +93,14 @@ export default function gawk(value, parent) {
 				const desc = Object.getOwnPropertyDescriptor(target, prop);
 
 				if (desc) {
+					if (desc.writable === false) {
+						// if both writable and configurable are false, then returning anything
+						// will cause an error because without proxies, setting a non-writable
+						// property has no effect, but attempting to set a proxied non-writable
+						// property is a TypeError
+						return true;
+					}
+
 					changed = target[prop] !== newValue;
 					const parents = isGawked(target[prop]) && target[prop].__gawk__.parents;
 					if (parents) {
@@ -78,47 +112,28 @@ export default function gawk(value, parent) {
 
 					// if the destination property has a setter, then we can't assume we need to
 					// fire a delete
-					if (typeof desc.set !== 'function' && (!Array.isArray(target) || prop !== 'length')) {
-						delete target[prop];
-					}
-				}
+					if (typeof desc.set === 'function') {
+						target[prop] = gawk(newValue, gawked);
 
-				target[prop] = gawk(newValue, gawked);
+					} else {
+						if (!Array.isArray(target) || prop !== 'length') {
+							delete target[prop];
+						}
+						desc.value = gawk(newValue, gawked);
+						Object.defineProperty(target, prop, desc);
+					}
+				} else {
+					target[prop] = gawk(newValue, gawked);
+				}
 
 				if (changed) {
 					notify(gawked);
 				}
-
 				return true;
-			},
-
-			deleteProperty: (target, prop) => {
-				if (prop === '__gawk__') {
-					throw new Error('Cannot delete property \'__gawk__\'');
-				}
-
-				// console.log('deleting', prop, target[prop]);
-
-				let result = true;
-
-				if (Object.prototype.hasOwnProperty.call(target, prop)) {
-					const parents = isGawked(target[prop]) && target[prop].__gawk__.parents;
-					if (parents) {
-						parents.delete(gawked);
-						if (!parents.size) {
-							target[prop].__gawk__.parents = null;
-						}
-					}
-
-					result = delete target[prop];
-					if (result) {
-						notify(gawked);
-					}
-				}
-
-				return result;
 			}
 		});
+
+		gawked = revocable.proxy;
 
 		Object.defineProperty(gawked, '__gawk__', {
 			value: {
@@ -179,14 +194,24 @@ export default function gawk(value, parent) {
 							notify(gawked, instance);
 						}
 					}
-				}
+				},
+
+				/**
+				 * Makes this gawked proxy unusable.
+				 */
+				revoke: revocable.revoke
 			}
 		});
 
 		// gawk any object properties
 		for (const key of Reflect.ownKeys(gawked)) {
 			if (key !== '__gawk__' && gawked[key] && typeof gawked[key] === 'object') {
-				gawked[key] = gawk(gawked[key], gawked);
+				// desc should always be an object since we know the key exists
+				const desc = Object.getOwnPropertyDescriptor(gawked, key);
+				if (desc && desc.configurable !== false) {
+					desc.value = gawk(gawked[key], gawked);
+					Object.defineProperty(gawked, key, desc);
+				}
 			}
 		}
 

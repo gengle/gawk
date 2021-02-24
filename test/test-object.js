@@ -1,11 +1,11 @@
 /* eslint-disable no-prototype-builtins */
 
-import gawk, { isGawked } from '../dist/index';
-
+import gawk, { isGawked } from '../src/index.js';
+import fs from 'fs';
 import { EventEmitter } from 'events';
-import { expect } from 'chai';
+import { fileURLToPath } from 'url';
 
-const version = require('./../package.json').version;
+const { version } = JSON.parse(fs.readFileSync(`${fileURLToPath(new URL('.', import.meta.url))}/../package.json`, 'utf-8'));
 
 describe('gawk() object', () => {
 	it('should gawk empty object', () => {

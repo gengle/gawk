@@ -1,4 +1,4 @@
-import gawk, { isGawked } from '../dist/index';
+import gawk, { isGawked } from '../src/index.js';
 
 describe('gawk.watch()', () => {
 	it('should fail to watch with non-gawk or object type', () => {
@@ -481,7 +481,7 @@ describe('gawk.watch()', () => {
 				expect(obj).to.equal('zip');
 			} else if (count === 2) {
 				expect(obj).to.be.undefined;
-			} else if (count === 2) {
+			} else if (count === 3) {
 				expect(obj).to.equal('zap');
 			}
 			count++;

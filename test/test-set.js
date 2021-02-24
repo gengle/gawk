@@ -1,4 +1,4 @@
-import gawk, { isGawked } from '../dist/index';
+import gawk, { isGawked } from '../src/index.js';
 
 describe('gawk.set()', () => {
 	it('should error if dest is not an object', () => {

@@ -4,13 +4,8 @@
         "node": true
     },
     "extends": "eslint:recommended",
-    "globals": {
-    },
-    "parser": "babel-eslint",
     "parserOptions": {
-        "ecmaFeatures": {
-            "modules": true
-        },
+        "ecmaVersion": "2021",
         "sourceType": "module"
     },
     "plugins": [
@@ -21,13 +16,12 @@
     ],
     "root": true,
     "rules": {
-        "array-bracket-spacing": [ 'warn', 'always' ],
+        "array-bracket-spacing": [ "warn", "always" ],
         "brace-style": [ 2, "1tbs", { "allowSingleLine": true } ],
         "camelcase": "off",
         "chai-expect/missing-assertion": "error",
         "chai-expect/terminating-properties": "warn",
         "curly": [ "error", "all" ],
-        "no-debugger": "warn",
         "eol-last": "error",
         "indent": [ "error", "tab", { "SwitchCase": 1 } ],
         "keyword-spacing": [ "error" ],

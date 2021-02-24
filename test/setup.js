@@ -1,16 +1,22 @@
-global.chai = require('chai');
-global.chai.use(require('sinon-chai'));
-global.expect = global.chai.expect;
-global.sinon = require('sinon');
+import chai from 'chai';
+import sinon from 'sinon';
+import sinonChai from 'sinon-chai';
 
-beforeEach(function () {
-	this.sandbox = global.sinon.createSandbox();
-	global.spy = this.sandbox.spy.bind(this.sandbox);
-	global.stub = this.sandbox.stub.bind(this.sandbox);
-});
+chai.use(sinonChai);
 
-afterEach(function () {
-	delete global.spy;
-	delete global.stub;
-	this.sandbox.restore();
-});
+global.expect = chai.expect;
+global.sinon = sinon;
+
+export const mochaHooks = {
+	beforeEach() {
+		this.sandbox = sinon.createSandbox();
+		global.spy = this.sandbox.spy.bind(this.sandbox);
+		global.stub = this.sandbox.stub.bind(this.sandbox);
+	},
+
+	afterEach() {
+		delete global.spy;
+		delete global.stub;
+		this.sandbox.restore();
+	}
+};

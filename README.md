@@ -4,7 +4,6 @@
 [![NPM Downloads][downloads-image]][downloads-url]
 [![Travis CI Build][travis-image]][travis-url]
 [![Appveyor CI Build][appveyor-image]][appveyor-url]
-[![Test Coverage][coveralls-image]][coveralls-url]
 [![Deps][david-image]][david-url]
 [![Dev Deps][david-dev-image]][david-dev-url]
 
@@ -253,8 +252,6 @@ MIT
 [downloads-url]: https://npmjs.org/package/gawk
 [travis-image]: https://travis-ci.org/cb1kenobi/gawk.svg?branch=master
 [travis-url]: https://travis-ci.org/cb1kenobi/gawk
-[coveralls-image]: https://img.shields.io/coveralls/cb1kenobi/gawk/master.svg
-[coveralls-url]: https://coveralls.io/r/cb1kenobi/gawk
 [appveyor-image]: https://ci.appveyor.com/api/projects/status/1ee7r1drlswy5jk6?svg=true
 [appveyor-url]: https://ci.appveyor.com/project/cb1kenobi/gawk
 [david-image]: https://img.shields.io/david/cb1kenobi/gawk.svg

@@ -1,16 +1,12 @@
-// istanbul ignore if
-if (!Error.prepareStackTrace) {
-	require('source-map-support/register');
-}
-
 import equal from 'fast-deep-equal';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 
 /**
  * The Gawk version number.
  * @type {String}
  */
-export const version = JSON.parse(fs.readFileSync(`${__dirname}/../package.json`, 'utf-8')).version;
+export const { version } = JSON.parse(fs.readFileSync(`${fileURLToPath(new URL('.', import.meta.url))}/../package.json`, 'utf-8'));
 
 /**
  * A list of built-in objects that should not be gawked.
@@ -35,7 +31,7 @@ if (typeof Reflect !== 'undefined') {
  * @param {Array|Object} [parent] - The parent gawk object.
  * @returns {Array|Object|*}
  */
-export default function gawk(value, parent) {
+export function gawk(value, parent) {
 	if (parent !== undefined && !isGawked(parent)) {
 		throw new TypeError('Expected parent to be gawked');
 	}
@@ -294,14 +290,14 @@ export default function gawk(value, parent) {
 	return gawked;
 }
 
+export default gawk;
+
 gawk.isGawked  = isGawked;
 gawk.merge     = merge;
 gawk.set       = set;
 gawk.mergeDeep = mergeDeep;
 gawk.watch     = watch;
 gawk.unwatch   = unwatch;
-
-export { gawk as gawk };
 
 /**
  * Determines if the specified variable is gawked.

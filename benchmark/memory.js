@@ -1,4 +1,4 @@
-const gawk = require('../dist/index').gawk;
+import gawk from '../src/index.js';
 
 const before = process.memoryUsage();
 console.log(before);

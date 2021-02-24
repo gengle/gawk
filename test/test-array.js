@@ -1,4 +1,4 @@
-import gawk, { Gawk, isGawked } from '../dist/index';
+import gawk, { isGawked } from '../src/index.js';
 
 import { EventEmitter } from 'events';
 
